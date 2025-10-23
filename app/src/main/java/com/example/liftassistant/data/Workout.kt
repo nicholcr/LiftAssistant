@@ -21,6 +21,7 @@ data class Workout(
     val name: String,
     val date: Date,
     val duration: Long,
+    var exercises: List<Exercise> = emptyList(),
     val routineUsedId: Int? = null
 ) {
 }

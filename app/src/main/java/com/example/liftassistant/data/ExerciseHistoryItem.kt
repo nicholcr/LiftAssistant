@@ -28,6 +28,5 @@ data class ExerciseHistoryItem(
     val exerciseId: Int,
     val workoutId: Int,
     val dateCompleted: Date,
-    @TypeConverters(Converters::class)
-    val sets: List<Set>
+    val sets: List<Set> = emptyList()
 )

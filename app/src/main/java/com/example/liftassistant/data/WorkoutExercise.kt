@@ -26,6 +26,5 @@ data class WorkoutExercise(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val workoutId: Int,
     val exerciseId: Int,
-    @TypeConverters(Converters::class)
-    val sets: List<Set>
+    val sets: List<Set> = emptyList()
 )

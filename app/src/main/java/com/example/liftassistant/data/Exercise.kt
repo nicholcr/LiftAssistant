@@ -9,5 +9,6 @@ data class Exercise(
     val name: String,
     var highestWeight: Float = 0f,
     var latestWeight: Float = 0f,
+    val history: List<ExerciseHistoryItem> = emptyList()
 ) {
 }
