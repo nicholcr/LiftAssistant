@@ -5,28 +5,25 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.example.liftassistant.data.Workout
-import com.example.liftassistant.data.WorkoutRoutine
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface WorkoutDao {
-    // Workout routines
-    @Query("SELECT * FROM workout_routines")
-    suspend fun getAllRoutines(): List<WorkoutRoutine>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertRoutine(routine: WorkoutRoutine)
-
-    @Delete
-    suspend fun deleteRoutine(routine: WorkoutRoutine)
-
     // Workouts
-    @Query("SELECT * FROM workouts ORDER BY date DESC")
-    suspend fun getAllWorkouts(): List<Workout>
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertWorkout(workout: Workout)
+    suspend fun insert(workout: Workout)
+
+    @Update
+    suspend fun update(workout: Workout)
 
     @Delete
-    suspend fun deleteWorkout(workout: Workout)
+    suspend fun delete(workout: Workout)
+
+    @Query("SELECT * from workouts WHERE id = :id")
+    fun getWorkout(id: Int): Flow<Workout>
+
+    @Query("SELECT * FROM workouts ORDER BY name ASC")
+    fun getAllWorkout(): Flow<List<Workout>>
 }

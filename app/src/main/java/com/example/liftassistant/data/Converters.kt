@@ -8,12 +8,14 @@ import java.util.Date
 class Converters {
     private val gson = Gson()
 
+    //Date <---> Long
     @TypeConverter
     fun fromTimestamp(value: Long?): Date? = value?.let { Date(it) }
 
     @TypeConverter
     fun dateToTimestamp(date: Date?): Long? = date?.time
 
+    //Exercise list <---> Json
     @TypeConverter
     fun fromExerciseList(value: List<Exercise>?): String? = gson.toJson(value)
 
@@ -24,6 +26,7 @@ class Converters {
         return gson.fromJson(value, listType)
     }
 
+    //WorkoutSets <---> Json
     @TypeConverter
     fun fromSetList(value: List<WorkoutSet>?): String? = gson.toJson(value)
 
