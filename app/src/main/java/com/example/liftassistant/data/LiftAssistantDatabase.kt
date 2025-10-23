@@ -6,6 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.liftassistant.data.daos.ExerciseDao
+import com.example.liftassistant.data.daos.WorkoutDao
+import com.example.liftassistant.data.daos.WorkoutRoutineDao
 
 @Database(entities = [Exercise::class, ExerciseHistoryItem::class, Workout::class,
     WorkoutExercise::class, WorkoutRoutine::class], version = 1, exportSchema = false)
@@ -13,6 +15,8 @@ import com.example.liftassistant.data.daos.ExerciseDao
 abstract class LiftAssistantDatabase : RoomDatabase() {
 
     abstract fun exerciseDao(): ExerciseDao
+    abstract fun workoutDao(): WorkoutDao
+    abstract fun workoutRoutineDao(): WorkoutRoutineDao
 
     companion object {
         @Volatile
