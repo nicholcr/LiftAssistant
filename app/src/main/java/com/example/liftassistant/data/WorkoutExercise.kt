@@ -2,29 +2,11 @@ package com.example.liftassistant.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import androidx.room.TypeConverters
 
-@Entity(
-    tableName = "workout_exercises",
-    foreignKeys = [
-        androidx.room.ForeignKey(
-            entity = Workout::class,
-            parentColumns = ["id"],
-            childColumns = ["workoutId"],
-            onDelete = androidx.room.ForeignKey.CASCADE
-        ),
-        androidx.room.ForeignKey(
-            entity = Exercise::class,
-            parentColumns = ["id"],
-            childColumns = ["exerciseId"],
-            onDelete = androidx.room.ForeignKey.CASCADE
-        )
-    ],
-    indices = [androidx.room.Index("workoutId"), androidx.room.Index("exerciseId")]
-)
+@Entity(tableName = "workout_exercises")
 data class WorkoutExercise(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val workoutId: Int,
     val exerciseId: Int,
-    val sets: List<Set> = emptyList()
+    val workoutSets: List<WorkoutSet> = emptyList()
 )

@@ -4,24 +4,13 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.util.Date
 
-@Entity(
-    tableName = "workouts",
-    foreignKeys = [
-        androidx.room.ForeignKey(
-            entity = WorkoutRoutine::class,
-            parentColumns = ["id"],
-            childColumns = ["routineId"],
-            onDelete = androidx.room.ForeignKey.SET_NULL
-        )
-    ],
-    indices = [androidx.room.Index("routineUsedId")]
-)
+@Entity(tableName = "workouts")
 data class Workout(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
-    val date: Date,
-    val duration: Long,
+    val date: Date = Date(),
+    val duration: Long = 0L,
     var exercises: List<Exercise> = emptyList(),
-    val routineUsedId: Int? = null
+    val routineUsedId: String? = null
 ) {
 }
