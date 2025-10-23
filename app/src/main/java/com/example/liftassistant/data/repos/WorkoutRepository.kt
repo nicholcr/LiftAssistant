@@ -7,7 +7,7 @@ interface WorkoutRepository {
     /**
      * Retrieve all the workouts from the the given data source.
      */
-    fun getAllWorkoutRStream(): Flow<List<Workout>>
+    fun getAllWorkoutStream(): Flow<List<Workout>>
 
     /**
      * Retrieve an workouts from the given data source that matches with the [id].

@@ -5,7 +5,7 @@ import com.example.liftassistant.data.daos.WorkoutDao
 import kotlinx.coroutines.flow.Flow
 
 class OfflineWorkoutRepository(private val workoutDao: WorkoutDao) : WorkoutRepository {
-    override fun getAllWorkoutRStream(): Flow<List<Workout>> = workoutDao.getAllWorkout()
+    override fun getAllWorkoutStream(): Flow<List<Workout>> = workoutDao.getAllWorkout()
 
     override fun getWorkoutStream(id: Int): Flow<Workout?> = workoutDao.getWorkout(id)
 
