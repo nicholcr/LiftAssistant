@@ -9,8 +9,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.liftassistant.ui.home.HomeDestination
 import com.example.liftassistant.ui.home.HomeScreen
-import com.example.liftassistant.ui.workout.WorkoutHistoryScreen
-import com.example.liftassistant.ui.workout.WorkoutHistoryDestination
+import com.example.liftassistant.ui.workout.WorkoutSummaryScreen
+import com.example.liftassistant.ui.workout.WorkoutSummaryDestination
 
 /**
  * Provides Navigation graph for the application.
@@ -27,11 +27,16 @@ fun LiftAssistantNavHost(
     ) {
         composable(route = HomeDestination.route) {
             HomeScreen(
-                navigateToWorkoutHistory = { navController.navigate(WorkoutHistoryDestination.route) }
+                navigateToWorkoutSummary = { navController.navigate("${WorkoutSummaryDestination.route}/${it}") }
             )
         }
-        composable(route = WorkoutHistoryDestination.route) {
-            WorkoutHistoryScreen(
+        composable(
+            route = WorkoutSummaryDestination.route,
+            arguments = listOf(navArgument(WorkoutSummaryDestination.workoutIdArg) {
+                type = NavType.IntType
+            })
+        ) {
+            WorkoutSummaryScreen(
                 navigateBack = { navController.popBackStack() },
                 onNavigateUp = { navController.navigateUp() }
             )

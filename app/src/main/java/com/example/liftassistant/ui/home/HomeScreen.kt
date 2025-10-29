@@ -44,7 +44,7 @@ object HomeDestination : NavigationDestination {
 
 @Composable
 fun HomeScreen(
-    navigateToWorkoutHistory: (Int) -> Unit,
+    navigateToWorkoutSummary: (Int) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -63,7 +63,7 @@ fun HomeScreen(
     ) { innerPadding ->
         HomeBody(
             workoutList = homeUiState.workoutList,
-            onWorkoutClick = navigateToWorkoutHistory,
+            onWorkoutClick = navigateToWorkoutSummary,
             modifier = modifier.fillMaxSize(),
             contentPadding = innerPadding,
         )
