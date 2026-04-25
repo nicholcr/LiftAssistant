@@ -7,6 +7,4 @@ import androidx.room.PrimaryKey
 data class WorkoutRoutine(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
-    val exercises: List<Exercise> = emptyList()
-) {
-}
+)

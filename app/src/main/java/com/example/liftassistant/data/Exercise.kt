@@ -7,8 +7,8 @@ import androidx.room.PrimaryKey
 data class Exercise(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
-    var highestWeight: Float = 0f,
+    val category: String,
+    val isBodyWeight: Boolean = false,
+    var prWeight: Float = 0f,
     var latestWeight: Float = 0f,
-    val history: List<ExerciseHistoryItem> = emptyList()
-) {
-}
+)
