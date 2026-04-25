@@ -1,21 +1,22 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 
 package com.example.liftassistant.ui.exercise
 
-import androidx.compose.runtime.Composable
-import com.example.liftassistant.ui.navigation.NavigationDestination
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -27,20 +28,22 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,13 +51,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.liftassistant.LiftAssistantTopAppBar
 import com.example.liftassistant.R
+import com.example.liftassistant.data.Category
 import com.example.liftassistant.data.Exercise
+import com.example.liftassistant.data.ExerciseWithCategories
 import com.example.liftassistant.ui.AppViewModelProvider
-import kotlinx.coroutines.launch
+import com.example.liftassistant.ui.navigation.NavigationDestination
+import com.example.liftassistant.ui.theme.LiftAssistantTheme
 
 object ExerciseListDestination : NavigationDestination {
     override val route = "exercise_list"
@@ -71,9 +79,9 @@ fun ExerciseListScreen(
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val uiState by viewModel.uiState.collectAsState()
-    val coroutineScope = rememberCoroutineScope()
     var expandedExerciseId by rememberSaveable { mutableStateOf<Int?>(null) }
-    var exerciseToDelete by remember { mutableStateOf<Exercise?>(null) }
+    var selectedCategoryId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var exerciseToDelete by remember { mutableStateOf<ExerciseWithCategories?>(null) }
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -96,7 +104,13 @@ fun ExerciseListScreen(
     ) { innerPadding ->
         ExerciseListBody(
             exerciseList = uiState.exerciseList,
+            allCategories = uiState.allCategories,
             expandedExerciseId = expandedExerciseId,
+            selectedCategoryId = selectedCategoryId,
+            onCategoryFilterClick = { categoryId ->
+                selectedCategoryId = if (selectedCategoryId == categoryId) null else categoryId
+                expandedExerciseId = null
+            },
             onCardClick = { id ->
                 expandedExerciseId = if (expandedExerciseId == id) null else id
             },
@@ -107,13 +121,11 @@ fun ExerciseListScreen(
         )
     }
 
-    exerciseToDelete?.let { exercise ->
+    exerciseToDelete?.let { exerciseWithCategories ->
         DeleteConfirmationDialog(
-            exerciseName = exercise.name,
+            exerciseName = exerciseWithCategories.exercise.name,
             onConfirm = {
-                coroutineScope.launch {
-                    viewModel.deleteExercise(exercise)
-                }
+                viewModel.deleteExercise(exerciseWithCategories.exercise)
                 exerciseToDelete = null
             },
             onDismiss = { exerciseToDelete = null }
@@ -123,37 +135,73 @@ fun ExerciseListScreen(
 
 @Composable
 private fun ExerciseListBody(
-    exerciseList: List<Exercise>,
+    exerciseList: List<ExerciseWithCategories>,
+    allCategories: List<Category>,
     expandedExerciseId: Int?,
+    selectedCategoryId: Int?,
+    onCategoryFilterClick: (Int) -> Unit,
     onCardClick: (Int) -> Unit,
     onEditClick: (Int) -> Unit,
-    onDeleteClick: (Exercise) -> Unit,
+    onDeleteClick: (ExerciseWithCategories) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
+    val filteredExercises = remember(exerciseList, selectedCategoryId) {
+        if (selectedCategoryId == null) exerciseList
+        else exerciseList.filter { ewc ->
+            ewc.categories.any { it.id == selectedCategoryId }
+        }
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
     ) {
-        if (exerciseList.isEmpty()) {
+        if (allCategories.isNotEmpty()) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = dimensionResource(R.dimen.padding_medium)),
+                horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.padding_small)),
+                modifier = Modifier.padding(
+                    top = contentPadding.calculateTopPadding(),
+                    bottom = dimensionResource(R.dimen.padding_small)
+                )
+            ) {
+                items(items = allCategories, key = { it.id }) { category ->
+                    FilterChip(
+                        selected = selectedCategoryId == category.id,
+                        onClick = { onCategoryFilterClick(category.id) },
+                        label = { Text(category.name) }
+                    )
+                }
+            }
+        }
+
+        if (filteredExercises.isEmpty()) {
             Text(
-                text = stringResource(R.string.empty_exercise_list),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                text = stringResource(
+                    if (selectedCategoryId != null) R.string.empty_filtered_exercise_list
+                    else R.string.empty_exercise_list
+                ),
+                textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(contentPadding)
+                modifier = Modifier.padding(dimensionResource(R.dimen.padding_medium))
             )
         } else {
             LazyColumn(
-                contentPadding = contentPadding,
+                contentPadding = if (allCategories.isNotEmpty()) {
+                    PaddingValues(bottom = contentPadding.calculateBottomPadding())
+                } else {
+                    contentPadding
+                },
                 modifier = Modifier.padding(horizontal = dimensionResource(R.dimen.padding_small))
             ) {
-                items(items = exerciseList, key = { it.id }) { exercise ->
+                items(items = filteredExercises, key = { it.exercise.id }) { exerciseWithCategories ->
                     ExerciseCard(
-                        exercise = exercise,
-                        isExpanded = expandedExerciseId == exercise.id,
-                        onCardClick = { onCardClick(exercise.id) },
-                        onEditClick = { onEditClick(exercise.id) },
-                        onDeleteClick = { onDeleteClick(exercise) },
+                        exerciseWithCategories = exerciseWithCategories,
+                        isExpanded = expandedExerciseId == exerciseWithCategories.exercise.id,
+                        onCardClick = { onCardClick(exerciseWithCategories.exercise.id) },
+                        onEditClick = { onEditClick(exerciseWithCategories.exercise.id) },
+                        onDeleteClick = { onDeleteClick(exerciseWithCategories) },
                         modifier = Modifier.padding(dimensionResource(R.dimen.padding_small))
                     )
                 }
@@ -164,7 +212,7 @@ private fun ExerciseListBody(
 
 @Composable
 private fun ExerciseCard(
-    exercise: Exercise,
+    exerciseWithCategories: ExerciseWithCategories,
     isExpanded: Boolean,
     onCardClick: () -> Unit,
     onEditClick: () -> Unit,
@@ -185,14 +233,16 @@ private fun ExerciseCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = exercise.name,
+                        text = exerciseWithCategories.exercise.name,
                         style = MaterialTheme.typography.titleMedium
                     )
-                    Text(
-                        text = exercise.category,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (exerciseWithCategories.categories.isNotEmpty()) {
+                        Text(
+                            text = exerciseWithCategories.categories.joinToString(", ") { it.name },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 Icon(
                     imageVector = if (isExpanded)
@@ -211,7 +261,7 @@ private fun ExerciseCard(
                 Column {
                     HorizontalDivider()
                     ExerciseDetails(
-                        exercise = exercise,
+                        exerciseWithCategories = exerciseWithCategories,
                         onEditClick = onEditClick,
                         onDeleteClick = onDeleteClick
                     )
@@ -223,37 +273,56 @@ private fun ExerciseCard(
 
 @Composable
 private fun ExerciseDetails(
-    exercise: Exercise,
+    exerciseWithCategories: ExerciseWithCategories,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val exercise = exerciseWithCategories.exercise
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(dimensionResource(R.dimen.padding_small))
+            .padding(dimensionResource(R.dimen.padding_medium)),
+        verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.padding_small))
     ) {
         ExerciseDetailRow(
             label = stringResource(R.string.pr_weight),
             value = if (exercise.isBodyweight)
-                stringResource(R.string.bodyweight_pr, exercise.prWeight)
+                formatBodyweightString(exercise.prWeight)
             else
                 stringResource(R.string.weight_value, exercise.prWeight)
         )
         ExerciseDetailRow(
             label = stringResource(R.string.latest_weight),
             value = if (exercise.isBodyweight)
-                stringResource(R.string.bodyweight_latest, exercise.latestWeight)
+                formatBodyweightString(exercise.latestWeight)
             else
                 stringResource(R.string.weight_value, exercise.latestWeight)
         )
         ExerciseDetailRow(
             label = stringResource(R.string.bodyweight_exercise),
-            value = if (exercise.isBodyweight)
-                stringResource(R.string.yes)
-            else
-                stringResource(R.string.no)
+            value = if (exercise.isBodyweight) stringResource(R.string.yes)
+            else stringResource(R.string.no)
         )
+
+        if (exerciseWithCategories.categories.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.categories),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.padding_small))
+            ) {
+                exerciseWithCategories.categories.forEach { category ->
+                    SuggestionChip(
+                        onClick = {},
+                        label = { Text(category.name) }
+                    )
+                }
+            }
+        }
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End
@@ -281,7 +350,7 @@ private fun ExerciseDetailRow(
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
@@ -293,6 +362,15 @@ private fun ExerciseDetailRow(
             text = value,
             style = MaterialTheme.typography.bodyMedium
         )
+    }
+}
+
+@Composable
+private fun formatBodyweightString(weight: Float): String {
+    return when {
+        weight > 0f -> stringResource(R.string.bodyweight_added, weight)
+        weight < 0f -> stringResource(R.string.bodyweight_assisted, -weight)
+        else -> stringResource(R.string.bodyweight_only)
     }
 }
 
@@ -317,4 +395,120 @@ private fun DeleteConfirmationDialog(
             }
         }
     )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ExerciseListEmptyPreview() {
+    LiftAssistantTheme {
+        ExerciseListBody(
+            exerciseList = emptyList(),
+            allCategories = emptyList(),
+            expandedExerciseId = null,
+            selectedCategoryId = null,
+            onCategoryFilterClick = {},
+            onCardClick = {},
+            onEditClick = {},
+            onDeleteClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ExerciseListCollapsedPreview() {
+    LiftAssistantTheme {
+        ExerciseListBody(
+            exerciseList = listOf(
+                ExerciseWithCategories(
+                    exercise = Exercise(id = 1, name = "Bench Press", prWeight = 185f, latestWeight = 175f),
+                    categories = listOf(Category(id = 1, name = "Push"), Category(id = 5, name = "Chest"))
+                ),
+                ExerciseWithCategories(
+                    exercise = Exercise(id = 2, name = "Pull-up", isBodyweight = true, prWeight = 45f, latestWeight = 25f),
+                    categories = listOf(Category(id = 2, name = "Pull"), Category(id = 6, name = "Biceps"))
+                )
+            ),
+            allCategories = listOf(
+                Category(id = 1, name = "Push"),
+                Category(id = 2, name = "Pull"),
+                Category(id = 3, name = "Legs"),
+                Category(id = 4, name = "Core"),
+                Category(id = 5, name = "Chest"),
+                Category(id = 6, name = "Biceps")
+            ),
+            expandedExerciseId = null,
+            selectedCategoryId = null,
+            onCategoryFilterClick = {},
+            onCardClick = {},
+            onEditClick = {},
+            onDeleteClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ExerciseListExpandedPreview() {
+    LiftAssistantTheme {
+        ExerciseListBody(
+            exerciseList = listOf(
+                ExerciseWithCategories(
+                    exercise = Exercise(id = 1, name = "Bench Press", prWeight = 185f, latestWeight = 175f),
+                    categories = listOf(Category(id = 1, name = "Push"), Category(id = 5, name = "Chest"))
+                ),
+                ExerciseWithCategories(
+                    exercise = Exercise(id = 2, name = "Pull-up", isBodyweight = true, prWeight = 45f, latestWeight = 25f),
+                    categories = listOf(Category(id = 2, name = "Pull"), Category(id = 6, name = "Biceps"))
+                )
+            ),
+            allCategories = listOf(
+                Category(id = 1, name = "Push"),
+                Category(id = 2, name = "Pull"),
+                Category(id = 3, name = "Legs"),
+                Category(id = 4, name = "Core"),
+                Category(id = 5, name = "Chest"),
+                Category(id = 6, name = "Biceps")
+            ),
+            expandedExerciseId = 1,
+            selectedCategoryId = null,
+            onCategoryFilterClick = {},
+            onCardClick = {},
+            onEditClick = {},
+            onDeleteClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ExerciseListFilteredPreview() {
+    LiftAssistantTheme {
+        ExerciseListBody(
+            exerciseList = listOf(
+                ExerciseWithCategories(
+                    exercise = Exercise(id = 1, name = "Bench Press", prWeight = 185f, latestWeight = 175f),
+                    categories = listOf(Category(id = 1, name = "Push"), Category(id = 5, name = "Chest"))
+                ),
+                ExerciseWithCategories(
+                    exercise = Exercise(id = 2, name = "Pull-up", isBodyweight = true, prWeight = 45f, latestWeight = 25f),
+                    categories = listOf(Category(id = 2, name = "Pull"), Category(id = 6, name = "Biceps"))
+                )
+            ),
+            allCategories = listOf(
+                Category(id = 1, name = "Push"),
+                Category(id = 2, name = "Pull"),
+                Category(id = 3, name = "Legs"),
+                Category(id = 4, name = "Core"),
+                Category(id = 5, name = "Chest"),
+                Category(id = 6, name = "Biceps")
+            ),
+            expandedExerciseId = null,
+            selectedCategoryId = 1,
+            onCategoryFilterClick = {},
+            onCardClick = {},
+            onEditClick = {},
+            onDeleteClick = {}
+        )
+    }
 }

@@ -2,13 +2,21 @@ package com.example.liftassistant.ui
 
 import android.app.Application
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
-import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.liftassistant.LiftAssistantApplication
-import com.example.liftassistant.ui.home.HomeViewModel
+import com.example.liftassistant.ui.exercise.ExerciseViewModel
+import com.example.liftassistant.ui.exercise.AddExerciseViewModel
+import com.example.liftassistant.ui.exercise.EditExerciseViewModel
 import com.example.liftassistant.ui.exercise.ExerciseListViewModel
+import com.example.liftassistant.ui.home.HomeViewModel
+import com.example.liftassistant.ui.workout.PerformWorkoutViewModel
+import com.example.liftassistant.ui.workout.WorkoutSummaryViewModel
+import com.example.liftassistant.ui.workout_routine.WorkoutRoutineListViewModel
+import com.example.liftassistant.ui.workout_routine.WorkoutRoutineViewModel
+import com.example.liftassistant.ui.workout_routine.AddWorkoutRoutineViewModel
+import com.example.liftassistant.ui.workout_routine.EditWorkoutRoutineViewModel
 
 object AppViewModelProvider {
     val Factory = viewModelFactory {
