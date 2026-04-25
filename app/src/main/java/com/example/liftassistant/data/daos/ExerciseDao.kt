@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ExerciseDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(exercise: Exercise)
 
     @Update
@@ -25,4 +25,7 @@ interface ExerciseDao {
 
     @Query("SELECT * from exercises ORDER BY name ASC")
     fun getAllExercises(): Flow<List<Exercise>>
+
+    @Query("SELECT * FROM exercises WHERE category = :category ORDER BY name ASC")
+    fun getExercisesByCategory(category: String): Flow<List<Exercise>>
 }

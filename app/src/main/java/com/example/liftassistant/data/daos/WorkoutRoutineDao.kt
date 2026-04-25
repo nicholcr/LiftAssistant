@@ -9,9 +9,8 @@ import com.example.liftassistant.data.WorkoutRoutine
 import kotlinx.coroutines.flow.Flow
 
 interface WorkoutRoutineDao {
-    // Workout routines
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(workoutRoutine: WorkoutRoutine)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insert(workoutRoutine: WorkoutRoutine): Long
 
     @Update
     suspend fun update(workoutRoutine: WorkoutRoutine)
