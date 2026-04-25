@@ -8,7 +8,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.liftassistant.LiftAssistantApplication
 import com.example.liftassistant.ui.home.HomeViewModel
-import com.example.liftassistant.ui.exercise.
+import com.example.liftassistant.ui.exercise.ExerciseListViewModel
 
 object AppViewModelProvider {
     val Factory = viewModelFactory {
@@ -23,17 +23,20 @@ object AppViewModelProvider {
         // Exercise
         initializer {
             ExerciseListViewModel(
-                liftAssistantApplication().container.exerciseRepository
+                liftAssistantApplication().container.exerciseRepository,
+                liftAssistantApplication().container.categoryRepository
             )
         }
         initializer {
             AddExerciseViewModel(
-                liftAssistantApplication().container.exerciseRepository
+                liftAssistantApplication().container.exerciseRepository,
+                liftAssistantApplication().container.categoryRepository
             )
         }
         initializer {
             EditExerciseViewModel(
                 liftAssistantApplication().container.exerciseRepository,
+                liftAssistantApplication().container.categoryRepository,
                 this.createSavedStateHandle()
             )
         }

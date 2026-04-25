@@ -25,17 +25,4 @@ interface WorkoutSetDao {
 
     @Query("SELECT * FROM workout_sets WHERE workoutExerciseId = :workoutExerciseId ORDER BY 'order' ASC")
     fun getSetsForWorkoutExercise(workoutExerciseId: Int): Flow<List<WorkoutSet>>
-
-    @Query("SELECT MAX(weight) FROM workout_sets WHERE workoutExerciseId IN (SELECT id FROM workout_exercises WHERE exerciseId = :exerciseId)")
-    fun getPrWeightForExercise(exerciseId: Int): Flow<Float?>
-
-    @Query("""
-        SELECT ws.weight FROM workout_sets ws
-        INNER JOIN workout_exercises we ON ws.workoutExerciseId = we.id
-        INNER JOIN workouts w ON we.workoutId = w.id
-        WHERE we.exerciseId = :exerciseId
-        ORDER BY w.date DESC, ws.'order' DESC
-        LIMIT 1
-    """)
-    fun getLatestWeightForExercise(exerciseId: Int): Flow<Float?>
 }

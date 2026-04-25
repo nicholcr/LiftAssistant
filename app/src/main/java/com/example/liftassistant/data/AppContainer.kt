@@ -1,7 +1,9 @@
 package com.example.liftassistant.data
 
 import android.content.Context
+import com.example.liftassistant.data.repos.CategoryRepository
 import com.example.liftassistant.data.repos.ExerciseRepository
+import com.example.liftassistant.data.repos.OfflineCategoryRepository
 import com.example.liftassistant.data.repos.OfflineExerciseRepository
 import com.example.liftassistant.data.repos.OfflineRoutineSlotRepository
 import com.example.liftassistant.data.repos.OfflineWorkoutExerciseRepository
@@ -15,6 +17,7 @@ import com.example.liftassistant.data.repos.WorkoutRoutineRepository
 import com.example.liftassistant.data.repos.WorkoutSetRepository
 
 interface AppContainer {
+    val categoryRepository: CategoryRepository
     val exerciseRepository: ExerciseRepository
     val workoutRepository: WorkoutRepository
     val workoutRoutineRepository: WorkoutRoutineRepository
@@ -24,6 +27,9 @@ interface AppContainer {
 }
 
 class AppDataContainer(private val context: Context) : AppContainer {
+    override val categoryRepository: CategoryRepository by lazy {
+        OfflineCategoryRepository(LiftAssistantDatabase.getDatabase(context).categoryDao())
+    }
     override val exerciseRepository: ExerciseRepository by lazy {
         OfflineExerciseRepository(LiftAssistantDatabase.getDatabase(context).exerciseDao())
     }

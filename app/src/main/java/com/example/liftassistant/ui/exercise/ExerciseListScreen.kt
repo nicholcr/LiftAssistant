@@ -2,7 +2,6 @@
 
 package com.example.liftassistant.ui.exercise
 
-import android.app.AlertDialog
 import androidx.compose.runtime.Composable
 import com.example.liftassistant.ui.navigation.NavigationDestination
 import androidx.compose.animation.AnimatedVisibility
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -237,21 +235,21 @@ private fun ExerciseDetails(
     ) {
         ExerciseDetailRow(
             label = stringResource(R.string.pr_weight),
-            value = if (exercise.isBodyWeight)
+            value = if (exercise.isBodyweight)
                 stringResource(R.string.bodyweight_pr, exercise.prWeight)
             else
                 stringResource(R.string.weight_value, exercise.prWeight)
         )
         ExerciseDetailRow(
             label = stringResource(R.string.latest_weight),
-            value = if (exercise.isBodyWeight)
+            value = if (exercise.isBodyweight)
                 stringResource(R.string.bodyweight_latest, exercise.latestWeight)
             else
                 stringResource(R.string.weight_value, exercise.latestWeight)
         )
         ExerciseDetailRow(
             label = stringResource(R.string.bodyweight_exercise),
-            value = if (exercise.isBodyWeight)
+            value = if (exercise.isBodyweight)
                 stringResource(R.string.yes)
             else
                 stringResource(R.string.no)

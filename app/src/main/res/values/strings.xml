@@ -19,4 +19,5 @@
     <string name="delete_exercise_confirmation">Are you sure you want to delete %s?</string>
     <string name="confirm">Confirm</string>
     <string name="cancel">Cancel</string>
+    <string name="categories">Categories</string>
 </resources>
