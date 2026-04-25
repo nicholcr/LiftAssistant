@@ -3,4 +3,20 @@
     <string name="back_button">Back</string>
     <string name="empty_workout_list">Complete a workout to view workout history.</string>
     <string name="workout_summary_title">Workout History</string>
+    <string name="exercise_list_title">Exercises</string>
+    <string name="add_exercise">Add exercise</string>
+    <string name="edit_exercise">Edit exercise</string>
+    <string name="delete_exercise">Delete exercise</string>
+    <string name="empty_exercise_list">No exercises yet. Add one to get started.</string>
+    <string name="pr_weight">PR weight</string>
+    <string name="latest_weight">Latest weight</string>
+    <string name="bodyweight_exercise">Bodyweight exercise</string>
+    <string name="bodyweight_pr">BW + %.1f lbs</string>
+    <string name="bodyweight_latest">BW + %.1f lbs</string>
+    <string name="weight_value">%.1f lbs</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="delete_exercise_confirmation">Are you sure you want to delete %s?</string>
+    <string name="confirm">Confirm</string>
+    <string name="cancel">Cancel</string>
 </resources>
