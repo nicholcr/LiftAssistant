@@ -2,11 +2,11 @@ package com.example.liftassistant.ui
 
 import android.app.Application
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.liftassistant.LiftAssistantApplication
-import com.example.liftassistant.ui.exercise.ExerciseViewModel
 import com.example.liftassistant.ui.exercise.AddExerciseViewModel
 import com.example.liftassistant.ui.exercise.EditExerciseViewModel
 import com.example.liftassistant.ui.exercise.ExerciseListViewModel

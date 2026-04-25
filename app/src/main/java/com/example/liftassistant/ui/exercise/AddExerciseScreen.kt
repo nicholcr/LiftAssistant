@@ -38,7 +38,7 @@ import com.example.liftassistant.ui.navigation.NavigationDestination
 import com.example.liftassistant.ui.theme.LiftAssistantTheme
 import kotlinx.coroutines.launch
 
-object AddExerciseScreenDestination : NavigationDestination {
+object AddExerciseDestination : NavigationDestination {
     override val route = "add_exercise"
     override val titleRes = R.string.add_exercise
 }
