@@ -31,4 +31,7 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM workouts WHERE endTime IS NULL LIMIT 1")
     fun getInProgressWorkout(): Flow<Workout?>
+
+    @Query("UPDATE workouts SET endTime = :endTime WHERE id = :workoutId")
+    suspend fun setEndTime(workoutId: Int, endTime: Long)
 }
