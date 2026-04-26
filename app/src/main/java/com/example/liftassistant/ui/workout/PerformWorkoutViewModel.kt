@@ -1,13 +1,45 @@
 package com.example.liftassistant.ui.workout
 
+import android.icu.util.Calendar
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.liftassistant.data.Exercise
+import com.example.liftassistant.data.ExerciseWithCategories
+import com.example.liftassistant.data.RoutineSlot
+import com.example.liftassistant.data.Workout
+import com.example.liftassistant.data.WorkoutExercise
+import com.example.liftassistant.data.WorkoutSet
 import com.example.liftassistant.data.repos.ExerciseRepository
 import com.example.liftassistant.data.repos.RoutineSlotRepository
 import com.example.liftassistant.data.repos.WorkoutExerciseRepository
 import com.example.liftassistant.data.repos.WorkoutRepository
 import com.example.liftassistant.data.repos.WorkoutSetRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
+data class WorkoutExerciseItem(
+    val workoutExercise: WorkoutExercise,
+    val exercise: Exercise,
+    val categories: List<String> = emptyList(),
+    val sets: List<WorkoutSet> = emptyList(),
+    val setScheme: String? = null
+)
+
+data class PerformWorkoutUiState(
+    val workout: Workout? = null,
+    val exerciseItems: List<WorkoutExerciseItem> = emptyList(),
+    val isSaving: Boolean = false,
+    val isComplete: Boolean = false
+)
 class PerformWorkoutViewModel(
     private val workoutRepository: WorkoutRepository,
     private val workoutExerciseRepository: WorkoutExerciseRepository,
@@ -15,4 +47,305 @@ class PerformWorkoutViewModel(
     private val exerciseRepository: ExerciseRepository,
     private val routineSlotRepository: RoutineSlotRepository,
     private val savedStateHandle: SavedStateHandle
-) : ViewModel()
+) : ViewModel() {
+
+    private val workoutId: Int? = savedStateHandle[PerformWorkoutDestination.workoutIdArg]
+
+    private val _uiState = MutableStateFlow(PerformWorkoutUiState())
+    val uiState: StateFlow<PerformWorkoutUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            if (workoutId != null) {
+                loadExistingWorkout(workoutId)
+            } else {
+                createNewWorkout()
+            }
+        }
+    }
+
+    private suspend fun loadExistingWorkout(id: Int) {
+        val workout = workoutRepository.getWorkoutStream(id)
+            .filterNotNull()
+            .first()
+        val workoutExercises = workoutExerciseRepository
+            .getExercisesForWorkoutStream(id)
+            .first()
+        val exerciseItems = workoutExercises.map { workoutExercise ->
+            buildExerciseItem(workoutExercise)
+        }
+        _uiState.update {
+            it.copy(
+                workout = workout,
+                exerciseItems = exerciseItems
+            )
+        }
+    }
+
+    private suspend fun createNewWorkout(routineId: Int? = null) {
+        val routineName = routineId?.let { id ->
+            routineSlotRepository.getSlotsForRoutineStream(id).first()
+            null
+        }
+        val workout = Workout(name = generateWorkoutName(routineName))
+        val newWorkoutId = workoutRepository.insertWorkout(workout)
+        val newWorkout = workoutRepository.getWorkoutStream(newWorkoutId.toInt())
+            .filterNotNull()
+            .first()
+
+        val exerciseItems = if (routineId != null) {
+            val slots = routineSlotRepository
+                .getSlotsForRoutineStream(routineId)
+                .first()
+            slots.mapIndexedNotNull { index, slot ->
+                slot.fixedExerciseId?.let { exerciseId ->
+                    val workoutExercise = WorkoutExercise(
+                        workoutId = newWorkoutId.toInt(),
+                        exerciseId = exerciseId,
+                        order = index,
+                        routineSlotId = slot.id
+                    )
+                    val weId = workoutExerciseRepository
+                        .insertWorkoutExercise(workoutExercise)
+                    val sets = prePopulateSets(slot, weId.toInt())
+                    val exerciseWithCategories = exerciseRepository
+                        .getExerciseWithCategoriesStream(exerciseId)
+                        .filterNotNull()
+                        .first()
+                    WorkoutExerciseItem(
+                        workoutExercise = workoutExercise.copy(id = weId.toInt()),
+                        exercise = exerciseWithCategories.exercise,
+                        categories = exerciseWithCategories.categories.map { it.name },
+                        sets = sets,
+                        setScheme = slot.setScheme
+                    )
+                }
+            }
+        } else {
+            emptyList()
+        }
+
+        _uiState.update {
+            it.copy(
+                workout = newWorkout,
+                exerciseItems = exerciseItems
+            )
+        }
+    }
+
+    private suspend fun buildExerciseItem(
+        workoutExercise: WorkoutExercise
+    ): WorkoutExerciseItem {
+        val exerciseWithCategories = exerciseRepository
+            .getExerciseWithCategoriesStream(workoutExercise.exerciseId)
+            .filterNotNull()
+            .first()
+        val sets = workoutSetRepository
+            .getSetsForWorkoutExerciseStream(workoutExercise.id)
+            .first()
+        val setScheme = workoutExercise.routineSlotId?.let { slotId ->
+            routineSlotRepository.getRoutineSlotStream(slotId).first()?.setScheme
+        }
+        return WorkoutExerciseItem(
+            workoutExercise = workoutExercise,
+            exercise = exerciseWithCategories.exercise,
+            categories = exerciseWithCategories.categories.map { it.name },
+            sets = sets,
+            setScheme = setScheme
+        )
+    }
+
+    private suspend fun prePopulateSets(
+        slot: RoutineSlot,
+        workoutExerciseId: Int
+    ): List<WorkoutSet> {
+        val sets = parseSetScheme(slot.setScheme, workoutExerciseId)
+        if (sets.isNotEmpty()) {
+            workoutSetRepository.insertAllWorkoutSets(sets)
+        }
+        return sets
+    }
+
+    private fun parseSetScheme(scheme: String, workoutExerciseId: Int): List<WorkoutSet> {
+        val sets = mutableListOf<WorkoutSet>()
+        var order = 0
+        scheme.split(",").map { it.trim() }.forEach { part ->
+            val amrap = part.endsWith("+")
+            val cleanPart = part.removeSuffix("+").trim()
+            val xIndex = cleanPart.indexOf('x', ignoreCase = true)
+            if (xIndex != -1) {
+                val count = cleanPart.substring(0, xIndex).trim().toIntOrNull() ?: 1
+                val repsStr = cleanPart.substring(xIndex + 1).trim()
+                val reps = repsStr.split("-").first().trim().toIntOrNull() ?: 0
+                repeat(count) {
+                    sets.add(
+                        WorkoutSet(
+                            workoutExerciseId = workoutExerciseId,
+                            order = order++,
+                            reps = reps,
+                            weight = 0f,
+                            isAmrap = amrap
+                        )
+                    )
+                }
+            }
+        }
+        return sets
+    }
+
+    private fun generateWorkoutName(routineName: String? = null): String {
+        val timeOfDay = when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
+            in 5..11 -> "Morning"
+            in 12..16 -> "Afternoon"
+            in 17..20 -> "Evening"
+            else -> "Night"
+        }
+        val dateFormatter = SimpleDateFormat("EEE MMM d", Locale.getDefault())
+        val dateString = dateFormatter.format(Date())
+        val prefix = routineName ?: "$timeOfDay Workout"
+        return "$prefix \u2014 $dateString"
+    }
+
+    fun addExercise(exerciseWithCategories: ExerciseWithCategories) {
+        viewModelScope.launch {
+            val workoutId = _uiState.value.workout?.id ?: return@launch
+            val order = _uiState.value.exerciseItems.size
+            val workoutExercise = WorkoutExercise(
+                workoutId = workoutId,
+                exerciseId = exerciseWithCategories.exercise.id,
+                order = order
+            )
+            val workoutExerciseId = workoutExerciseRepository
+                .insertWorkoutExercise(workoutExercise)
+            _uiState.update { state ->
+                state.copy(
+                    exerciseItems = state.exerciseItems + WorkoutExerciseItem(
+                        workoutExercise = workoutExercise.copy(
+                            id = workoutExerciseId.toInt()
+                        ),
+                        exercise = exerciseWithCategories.exercise,
+                        categories = exerciseWithCategories.categories.map { it.name }
+                    )
+                )
+            }
+        }
+    }
+
+    fun addSet(workoutExerciseId: Int) {
+        viewModelScope.launch {
+            val exerciseItem = _uiState.value.exerciseItems
+                .find { it.workoutExercise.id == workoutExerciseId }
+                ?: return@launch
+            val order = exerciseItem.sets.size
+            val newSet = WorkoutSet(
+                workoutExerciseId = workoutExerciseId,
+                order = order,
+                reps = 0,
+                weight = 0f
+            )
+            workoutSetRepository.insertWorkoutSet(newSet)
+            _uiState.update { state ->
+                state.copy(
+                    exerciseItems = state.exerciseItems.map { item ->
+                        if (item.workoutExercise.id == workoutExerciseId) {
+                            item.copy(sets = item.sets + newSet)
+                        } else item
+                    }
+                )
+            }
+        }
+    }
+
+    fun updateSet(updatedSet: WorkoutSet) {
+        viewModelScope.launch {
+            workoutSetRepository.updateWorkoutSet(updatedSet)
+            _uiState.update { state ->
+                state.copy(
+                    exerciseItems = state.exerciseItems.map { item ->
+                        if (item.workoutExercise.id == updatedSet.workoutExerciseId) {
+                            item.copy(
+                                sets = item.sets.map { set ->
+                                    if (set.id == updatedSet.id) updatedSet else set
+                                }
+                            )
+                        } else item
+                    }
+                )
+            }
+            updateExerciseWeights(updatedSet)
+        }
+    }
+
+    fun deleteSet(workoutSet: WorkoutSet) {
+        viewModelScope.launch {
+            workoutSetRepository.deleteWorkoutSet(workoutSet)
+            _uiState.update { state ->
+                state.copy(
+                    exerciseItems = state.exerciseItems.map { item ->
+                        if (item.workoutExercise.id == workoutSet.workoutExerciseId) {
+                            val updatedSets = item.sets
+                                .filter { it.id != workoutSet.id }
+                                .mapIndexed { index, set -> set.copy(order = index) }
+                            updatedSets.forEach { workoutSetRepository.updateWorkoutSet(it) }
+                            item.copy(sets = updatedSets)
+                        } else item
+                    }
+                )
+            }
+        }
+    }
+
+    fun reorderExercises(fromIndex: Int, toIndex: Int) {
+        val currentItems = _uiState.value.exerciseItems.toMutableList()
+        val item = currentItems.removeAt(fromIndex)
+        currentItems.add(toIndex, item)
+        val reorderedItems = currentItems.mapIndexed { index, exerciseItem ->
+            exerciseItem.copy(
+                workoutExercise = exerciseItem.workoutExercise.copy(order = index)
+            )
+        }
+        _uiState.update { it.copy(exerciseItems = reorderedItems) }
+        viewModelScope.launch {
+            reorderedItems.forEach { exerciseItem ->
+                workoutExerciseRepository.updateWorkoutExercise(
+                    exerciseItem.workoutExercise
+                )
+            }
+        }
+    }
+
+    fun endWorkout() {
+        viewModelScope.launch {
+            val workoutId = _uiState.value.workout?.id ?: return@launch
+            _uiState.update { it.copy(isSaving = true) }
+            workoutRepository.setEndTime(workoutId, Date())
+            _uiState.update { it.copy(isSaving = false, isComplete = true) }
+        }
+    }
+
+    private suspend fun updateExerciseWeights(updatedSet: WorkoutSet) {
+        val exerciseItem = _uiState.value.exerciseItems
+            .find { it.workoutExercise.id == updatedSet.workoutExerciseId }
+            ?: return
+        val exercise = exerciseItem.exercise
+        val allWeights = exerciseItem.sets.map { it.weight }
+        val newPr = allWeights.maxOrNull() ?: 0f
+        val newLatest = updatedSet.weight
+        if (newPr > exercise.prWeight || newLatest != exercise.latestWeight) {
+            val updatedExercise = exercise.copy(
+                prWeight = maxOf(newPr, exercise.prWeight),
+                latestWeight = newLatest
+            )
+            exerciseRepository.updateExercise(updatedExercise)
+            _uiState.update { state ->
+                state.copy(
+                    exerciseItems = state.exerciseItems.map { item ->
+                        if (item.workoutExercise.id == updatedSet.workoutExerciseId) {
+                            item.copy(exercise = updatedExercise)
+                        } else item
+                    }
+                )
+            }
+        }
+    }
+}

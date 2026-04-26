@@ -33,6 +33,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.util.TimeUtils.formatDuration
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -41,6 +42,7 @@ import com.example.liftassistant.ui.AppViewModelProvider
 import com.example.liftassistant.ui.navigation.NavigationDestination
 import com.example.liftassistant.R
 import com.example.liftassistant.data.Workout
+import com.example.liftassistant.ui.theme.LiftAssistantTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -185,4 +187,39 @@ private fun formatDuration(durationMillis: Long): String {
 private fun formatDate(date: Date): String {
     val formatter = SimpleDateFormat("EEE, MMM d YYYY", Locale.getDefault())
     return formatter.format(date)
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun HomeBodyEmptyPreview() {
+    LiftAssistantTheme {
+        HomeBody(
+            workoutList = emptyList(),
+            onWorkoutClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun HomeBodyPopulatedPreview() {
+    LiftAssistantTheme {
+        HomeBody(
+            workoutList = listOf(
+                Workout(
+                    id = 1,
+                    name = "Upper A",
+                    date = Date(),
+                    endTime = Date(Date().time + 3_600_000L)
+                ),
+                Workout(
+                    id = 2,
+                    name = "Legs A",
+                    date = Date(Date().time - 86_400_000L),
+                    endTime = Date(Date().time - 86_400_000L + 4_200_000L)
+                )
+            ),
+            onWorkoutClick = {}
+        )
+    }
 }
