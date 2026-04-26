@@ -51,6 +51,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
 
+    // additional icons
+    implementation("androidx.compose.material:material-icons-extended")
+
     // reorder lazy lists
     implementation("sh.calvin.reorderable:reorderable:2.1.1")
 

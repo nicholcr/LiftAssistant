@@ -3,6 +3,8 @@
     <string name="back_button">Back</string>
     <string name="workout_summary_title">Workout Summary</string>
     <string name="empty_workout_list">No workouts yet. Start one to get going.</string>
+    <string name="workout_routine_list_title">Routines</string>
+    <string name="perform_workout_title">Workout</string>
     <string name="exercise_list_title">Exercises</string>
     <string name="add_exercise">Add exercise</string>
     <string name="edit_exercise">Edit exercise</string>
@@ -15,7 +17,12 @@
     <string name="bodyweight_only">Bodyweight</string>
     <string name="latest_weight">Latest weight</string>
     <string name="bodyweight_exercise">Bodyweight exercise</string>
+    <string name="tab_history">History</string>
+    <string name="tab_exercises">Exercises</string>
+    <string name="tab_routines">Routines</string>
     <string name="weight_value">%.1f lbs</string>
+    <string name="workout_in_progress">Tap to resume</string>
+    <string name="resume_workout">Resume workout</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
     <string name="delete_exercise_confirmation">Are you sure you want to delete %s?</string>
