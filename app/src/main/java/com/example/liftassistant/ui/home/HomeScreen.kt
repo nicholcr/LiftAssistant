@@ -13,9 +13,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -30,12 +34,16 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.util.TimeUtils.formatDuration
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.liftassistant.LiftAssistantTopAppBar
 import com.example.liftassistant.ui.AppViewModelProvider
 import com.example.liftassistant.ui.navigation.NavigationDestination
 import com.example.liftassistant.R
 import com.example.liftassistant.data.Workout
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 object HomeDestination : NavigationDestination {
     override val route = "home"
@@ -59,6 +67,16 @@ fun HomeScreen(
                 canNavigateBack = false,
                 scrollBehavior = scrollBehavior
             )
+        },
+        floatingActionButton = {
+            if (homeUiState.inProgressWorkout == null) {
+                FloatingActionButton(onClick = navigateToStartWorkout) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.start_workout)
+                    )
+                }
+            }
         }
     ) { innerPadding ->
         HomeBody(
@@ -93,7 +111,7 @@ private fun HomeBody(
                 workoutList = workoutList,
                 onWorkoutClick = { onWorkoutClick(it.id) },
                 contentPadding = contentPadding,
-                modifier = Modifier.padding(horizontal = dimensionResource(id = R.dimen.padding_small))
+                modifier = Modifier.padding(horizontal = dimensionResource(R.dimen.padding_small))
             )
         }
     }
@@ -142,15 +160,29 @@ private fun WorkoutListItem(
                     style = MaterialTheme.typography.titleLarge
                 )
                 Spacer(Modifier.weight(1f))
-                Text(
-                    text = workout.duration.toString(),
-                    style = MaterialTheme.typography.titleMedium
-                )
+                workout.duration?.let { duration ->
+                    Text(
+                        text = formatDuration(duration),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
             }
             Text(
-                text = workout.date.toString(),
+                text = formatDate(workout.date),
                 style = MaterialTheme.typography.titleMedium
             )
         }
     }
+}
+
+private fun formatDuration(durationMillis: Long): String {
+    val totalMinutes = durationMillis / 1000 / 60
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+}
+
+private fun formatDate(date: Date): String {
+    val formatter = SimpleDateFormat("EEE, MMM d YYYY", Locale.getDefault())
+    return formatter.format(date)
 }

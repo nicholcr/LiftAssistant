@@ -28,6 +28,7 @@
     <string name="delete_exercise_confirmation">Are you sure you want to delete %s?</string>
     <string name="confirm">Confirm</string>
     <string name="cancel">Cancel</string>
+    <string name="start_workout">Start workout</string>
     <string name="exercise_name">Exercise name</string>
     <string name="categories">Categories</string>
     <string name="save">Save</string>
