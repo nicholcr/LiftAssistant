@@ -28,4 +28,7 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM workouts WHERE routineUsedId = :routineId ORDER BY date DESC")
     fun getWorkoutsForRoutine(routineId: Int): Flow<List<Workout>>
+
+    @Query("SELECT * FROM workouts WHERE endTime IS NULL LIMIT 1")
+    fun getInProgressWorkout(): Flow<Workout?>
 }

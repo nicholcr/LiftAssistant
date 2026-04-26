@@ -1,9 +1,23 @@
 package com.example.liftassistant.ui.exercise
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.liftassistant.data.Category
+import com.example.liftassistant.data.Exercise
+import com.example.liftassistant.data.ExerciseCategory
 import com.example.liftassistant.data.repos.CategoryRepository
 import com.example.liftassistant.data.repos.ExerciseRepository
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.WhileSubscribed
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class EditExerciseViewModel(
     private val exerciseRepository: ExerciseRepository,
@@ -11,4 +25,66 @@ class EditExerciseViewModel(
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
+    companion object {
+        private const val TIMEOUT_MILLIS = 5_000L
+    }
+
+    private val exerciseId: Int = checkNotNull(savedStateHandle[EditExerciseDestination.exerciseIdArg])
+
+    var formState by mutableStateOf(ExerciseFormState())
+        private set
+
+    val availableCategories: StateFlow<List<Category>> =
+        categoryRepository.getAllCategoriesStream()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
+                initialValue = emptyList()
+            )
+
+    init {
+        viewModelScope.launch {
+            val exerciseWithCategories = exerciseRepository
+                .getExerciseWithCategoriesStream(exerciseId)
+                .filterNotNull()
+                .first()
+            formState = ExerciseFormState(
+                name = exerciseWithCategories.exercise.name,
+                isBodyweight = exerciseWithCategories.exercise.isBodyweight,
+                selectedCategories = exerciseWithCategories.categories,
+                isValid = true
+            )
+        }
+    }
+
+    fun updateFormState(newState: ExerciseFormState) {
+        formState = newState.copy(isValid = validateInput(newState))
+    }
+
+    private fun validateInput(state: ExerciseFormState): Boolean {
+        return state.name.isNotBlank()
+    }
+
+    suspend fun saveExercise() {
+        if (!validateInput(formState)) return
+        exerciseRepository.updateExercise(
+            Exercise(
+                id = exerciseId,
+                name = formState.name.trim(),
+                isBodyweight = formState.isBodyweight,
+                prWeight = formState.prWeight,
+                latestWeight = formState.latestWeight
+            )
+        )
+        exerciseRepository.deleteAllCategoriesForExercise(exerciseId)
+        val exerciseCategories = formState.selectedCategories.map { category ->
+            ExerciseCategory(
+                exerciseId = exerciseId,
+                categoryId = category.id
+            )
+        }
+        if (exerciseCategories.isNotEmpty()) {
+            exerciseRepository.insertAllExerciseCategories(exerciseCategories)
+        }
+    }
 }

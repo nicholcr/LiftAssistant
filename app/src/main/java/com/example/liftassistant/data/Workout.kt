@@ -20,7 +20,12 @@ data class Workout(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
     val date: Date = Date(),
-    val duration: Long = 0L,
+    val endTime: Date? = null,
     val routineUsedId: Int? = null
 ) {
+    val duration: Long?
+        get() = endTime?.let { it.time - date.time }
+
+    val isInProgress: Boolean
+        get() = endTime == null
 }

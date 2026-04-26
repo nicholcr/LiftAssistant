@@ -9,6 +9,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.liftassistant.ui.exercise.AddExerciseDestination
 import com.example.liftassistant.ui.exercise.AddExerciseScreen
+import com.example.liftassistant.ui.exercise.EditExerciseDestination
+import com.example.liftassistant.ui.exercise.EditExerciseScreen
 import com.example.liftassistant.ui.exercise.ExerciseListDestination
 import com.example.liftassistant.ui.exercise.ExerciseListScreen
 import com.example.liftassistant.ui.home.HomeDestination
@@ -63,6 +65,18 @@ fun LiftAssistantNavHost(
 
         composable(route = AddExerciseDestination.route) {
             AddExerciseScreen(
+                navigateBack = { navController.popBackStack() },
+                onNavigateUp = { navController.navigateUp() }
+            )
+        }
+
+        composable(
+            route = EditExerciseDestination.routeWithArgs,
+            arguments = listOf(navArgument(EditExerciseDestination.exerciseIdArg) {
+                type = NavType.IntType
+            })
+        ) {
+            EditExerciseScreen(
                 navigateBack = { navController.popBackStack() },
                 onNavigateUp = { navController.navigateUp() }
             )

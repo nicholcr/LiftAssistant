@@ -67,5 +67,7 @@ data class ExerciseFormState(
     val name: String = "",
     val isBodyweight: Boolean = false,
     val selectedCategories: List<Category> = emptyList(),
+    val prWeight: Float = 0f,
+    val latestWeight: Float = 0f,
     val isValid: Boolean = false
 )
