@@ -32,4 +32,10 @@
     <string name="exercise_name">Exercise name</string>
     <string name="categories">Categories</string>
     <string name="save">Save</string>
+    <string name="end_workout">End workout</string>
+    <string name="end_workout_confirmation">Are you sure you want to end this workout?</string>
+    <string name="search_exercises">Search exercises…</string>
+    <string name="create_and_add_new_exercise">Create and add new exercise</string>
+    <string name="create_and_add_exercise">Create and add "%s"</string>
+    <string name="new_exercise">New exercise</string>
 </resources>

@@ -37,6 +37,7 @@ data class WorkoutExerciseItem(
 data class PerformWorkoutUiState(
     val workout: Workout? = null,
     val exerciseItems: List<WorkoutExerciseItem> = emptyList(),
+    val availableExercises: List<ExerciseWithCategories> = emptyList(),
     val isSaving: Boolean = false,
     val isComplete: Boolean = false
 )
@@ -74,10 +75,14 @@ class PerformWorkoutViewModel(
         val exerciseItems = workoutExercises.map { workoutExercise ->
             buildExerciseItem(workoutExercise)
         }
+        val availableExercises = exerciseRepository
+            .getAllExercisesWithCategoriesStream()
+            .first()
         _uiState.update {
             it.copy(
                 workout = workout,
-                exerciseItems = exerciseItems
+                exerciseItems = exerciseItems,
+                availableExercises = availableExercises
             )
         }
     }
@@ -92,7 +97,9 @@ class PerformWorkoutViewModel(
         val newWorkout = workoutRepository.getWorkoutStream(newWorkoutId.toInt())
             .filterNotNull()
             .first()
-
+        val availableExercises = exerciseRepository
+            .getAllExercisesWithCategoriesStream()
+            .first()
         val exerciseItems = if (routineId != null) {
             val slots = routineSlotRepository
                 .getSlotsForRoutineStream(routineId)
@@ -128,7 +135,8 @@ class PerformWorkoutViewModel(
         _uiState.update {
             it.copy(
                 workout = newWorkout,
-                exerciseItems = exerciseItems
+                exerciseItems = exerciseItems,
+                availableExercises = availableExercises
             )
         }
     }
@@ -228,6 +236,19 @@ class PerformWorkoutViewModel(
                     )
                 )
             }
+        }
+    }
+
+    fun quickAddExercise(name: String) {
+        viewModelScope.launch {
+            val exerciseId = exerciseRepository.insertExercise(
+                Exercise(name = name.trim())
+            )
+            val exerciseWithCategories = exerciseRepository
+                .getExerciseWithCategoriesStream(exerciseId.toInt())
+                .filterNotNull()
+                .first()
+            addExercise(exerciseWithCategories)
         }
     }
 

@@ -54,6 +54,7 @@ object HomeDestination : NavigationDestination {
 
 @Composable
 fun HomeScreen(
+    navigateToStartWorkout: () -> Unit,
     navigateToWorkoutSummary: (Int) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory)

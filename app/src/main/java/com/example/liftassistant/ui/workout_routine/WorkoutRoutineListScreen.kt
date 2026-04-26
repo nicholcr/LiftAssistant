@@ -1,6 +1,7 @@
 package com.example.liftassistant.ui.workout_routine
 
 import androidx.compose.runtime.Composable
+import com.example.liftassistant.R
 import androidx.compose.ui.Modifier
 import com.example.liftassistant.ui.navigation.NavigationDestination
 
