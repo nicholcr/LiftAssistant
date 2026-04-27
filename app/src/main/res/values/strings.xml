@@ -51,4 +51,12 @@
     <string name="move_down">Move down</string>
     <string name="rest_timer">Rest timer</string>
     <string name="rest_timer_duration">Rest duration</string>
+    <string name="delete_workout">Delete workout</string>
+    <string name="delete_workout_confirmation">Are you sure you want to delete %s?</string>
+    <string name="no_exercises_logged">No exercises were logged for this workout.</string>
+    <string name="workout_date">Date</string>
+    <string name="workout_duration">Duration</string>
+    <string name="not_logged">—</string>
+    <string name="select_routine">Use a routine</string>
+    <string name="start_freeform_workout">Start freeform workout</string>
 </resources>

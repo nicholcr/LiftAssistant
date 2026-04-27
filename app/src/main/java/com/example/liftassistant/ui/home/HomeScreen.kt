@@ -2,6 +2,7 @@
 
 package com.example.liftassistant.ui.home
 
+import android.app.AlertDialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,14 +20,17 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -42,6 +46,7 @@ import com.example.liftassistant.ui.AppViewModelProvider
 import com.example.liftassistant.ui.navigation.NavigationDestination
 import com.example.liftassistant.R
 import com.example.liftassistant.data.Workout
+import com.example.liftassistant.data.WorkoutRoutine
 import com.example.liftassistant.ui.theme.LiftAssistantTheme
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -55,12 +60,14 @@ object HomeDestination : NavigationDestination {
 @Composable
 fun HomeScreen(
     navigateToStartWorkout: () -> Unit,
+    navigateToStartWorkoutFromRoutine: (Int) -> Unit,
     navigateToWorkoutSummary: (Int) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val homeUiState by viewModel.homeUiState.collectAsState()
+    var showStartWorkoutDialog by remember { mutableListOf(false) }
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -73,7 +80,9 @@ fun HomeScreen(
         },
         floatingActionButton = {
             if (homeUiState.inProgressWorkout == null) {
-                FloatingActionButton(onClick = navigateToStartWorkout) {
+                FloatingActionButton(
+                    onClick = { showStartWorkoutDialog = true }
+                ) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = stringResource(R.string.start_workout)
@@ -87,6 +96,21 @@ fun HomeScreen(
             onWorkoutClick = navigateToWorkoutSummary,
             modifier = modifier.fillMaxSize(),
             contentPadding = innerPadding,
+        )
+    }
+
+    if (showStartWorkoutDialog) {
+        StartWorkoutDialog(
+            routineList = homeUiState.workoutRoutineList,
+            onStartFreeform = {
+                showStartWorkoutDialog = false
+                navigateToStartWorkout()
+            },
+            onStartFromRoutine = { routine ->
+                showStartWorkoutDialog = false
+                navigateToStartWorkoutFromRoutine(routine.id)
+            },
+            onDismiss = { showStartWorkoutDialog = false }
         )
     }
 }
@@ -176,6 +200,70 @@ private fun WorkoutListItem(
             )
         }
     }
+}
+
+@Composable
+private fun StartWorkoutDialog(
+    routineList: List<WorkoutRoutine>,
+    onStartFreeform: () -> Unit,
+    onStartFromRoutine: (WorkoutRoutine) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.start_workout)) },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(
+                    dimensionResource(R.dimen.padding_small)
+                )
+            ) {
+                if (routineList.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.select_routine),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    LazyColumn(
+                        modifier = Modifier.weight(1f, fill = false)
+                    ) {
+                        items(
+                            items = routineList,
+                            key = { it.id }
+                        ) { routine ->
+                            TextButton(
+                                onClick = { onStartFromRoutine(routine) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = routine.name,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Start
+                                )
+                            }
+                            HorizontalDivider()
+                        }
+                    }
+                }
+                TextButton(
+                    onClick = onStartFreeform,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = stringResource(R.string.start_freeform_workout),
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Start
+                    )
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
 }
 
 private fun formatDuration(durationMillis: Long): String {

@@ -51,16 +51,16 @@ class PerformWorkoutViewModel(
 ) : ViewModel() {
 
     private val workoutId: Int? = savedStateHandle[PerformWorkoutDestination.workoutIdArg]
+    private val routineId: Int? = savedStateHandle[PerformWorkoutDestination.routineIdArg]
 
     private val _uiState = MutableStateFlow(PerformWorkoutUiState())
     val uiState: StateFlow<PerformWorkoutUiState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            if (workoutId != null) {
-                loadExistingWorkout(workoutId)
-            } else {
-                createNewWorkout()
+            when {
+                workoutId != null -> loadExistingWorkout(workoutId)
+                else -> createNewWorkout(routineId)
             }
         }
     }

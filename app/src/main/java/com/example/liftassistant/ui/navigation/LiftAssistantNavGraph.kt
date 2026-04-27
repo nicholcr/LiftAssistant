@@ -99,6 +99,11 @@ fun LiftAssistantNavHost(
                         navigateToStartWorkout = {
                             navController.navigate(PerformWorkoutDestination.route)
                         },
+                        navigateToStartWorkoutFromRoutine = { routineId ->
+                            navController.navigate(
+                                "${PerformWorkoutDestination.route}?routineId=$routineId"
+                            )
+                        },
                         navigateToWorkoutSummary = { workoutId ->
                             navController.navigate(
                                 "${WorkoutSummaryDestination.route}/$workoutId"
@@ -192,6 +197,28 @@ fun LiftAssistantNavHost(
                             "${WorkoutSummaryDestination.route}/$workoutId"
                         ) {
                             popUpTo(PerformWorkoutDestination.routeWithArgs) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable(
+                route = PerformWorkoutDestination.routeWithRoutineArg,
+                arguments = listOf(navArgument(PerformWorkoutDestination.routineIdArg) {
+                    type = NavType.IntType
+                    nullable = false
+                    defaultValue = -1
+                })
+            ) {
+                PerformWorkoutScreen(
+                    navigateBack = { navController.popBackStack() },
+                    navigateToWorkoutSummary = { workoutId ->
+                        navController.navigate(
+                            "${WorkoutSummaryDestination.route}/$workoutId"
+                        ) {
+                            popUpTo(PerformWorkoutDestination.routeWithRoutineArg) {
+                                inclusive = true
+                            }
                         }
                     }
                 )

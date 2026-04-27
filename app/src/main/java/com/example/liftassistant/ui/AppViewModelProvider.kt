@@ -24,7 +24,8 @@ object AppViewModelProvider {
         // Home
         initializer {
             HomeViewModel(
-                liftAssistantApplication().container.workoutRepository
+                liftAssistantApplication().container.workoutRepository,
+                liftAssistantApplication().container.workoutRoutineRepository
             )
         }
 

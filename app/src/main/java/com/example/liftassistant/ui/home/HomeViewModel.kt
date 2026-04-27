@@ -3,7 +3,9 @@ package com.example.liftassistant.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.liftassistant.data.Workout
+import com.example.liftassistant.data.WorkoutRoutine
 import com.example.liftassistant.data.repos.WorkoutRepository
+import com.example.liftassistant.data.repos.WorkoutRoutineRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -14,7 +16,8 @@ import kotlinx.coroutines.flow.stateIn
  * ViewModel to retrieve all past workouts in the Room database.
  */
 class HomeViewModel(
-    private val workoutRepository: WorkoutRepository
+    private val workoutRepository: WorkoutRepository,
+    private val workoutRoutineRepository: WorkoutRoutineRepository
 ) : ViewModel() {
 
     companion object {
@@ -23,11 +26,13 @@ class HomeViewModel(
 
     val homeUiState: StateFlow<HomeUiState> = combine (
         workoutRepository.getAllWorkoutStream(),
-        workoutRepository.getInProgressWorkoutStream()
-    ) { workouts, inProgressWorkout ->
+        workoutRepository.getInProgressWorkoutStream(),
+        workoutRoutineRepository.getAllWorkoutRoutineStream()
+    ) { workouts, inProgressWorkout, routines ->
         HomeUiState(
             workoutList = workouts.filter { it.endTime != null },
-            inProgressWorkout = inProgressWorkout
+            inProgressWorkout = inProgressWorkout,
+            workoutRoutineList = routines
         )
     }.stateIn(
         scope = viewModelScope,
@@ -37,6 +42,7 @@ class HomeViewModel(
 }
 
 data class HomeUiState(
-    val workoutList: List<Workout> = listOf(),
-    val inProgressWorkout: Workout? = null
+    val workoutList: List<Workout> = emptyList(),
+    val inProgressWorkout: Workout? = null,
+    val workoutRoutineList: List<WorkoutRoutine> = emptyList()
 )

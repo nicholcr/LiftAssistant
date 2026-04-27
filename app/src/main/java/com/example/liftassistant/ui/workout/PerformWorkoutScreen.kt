@@ -78,7 +78,9 @@ object PerformWorkoutDestination : NavigationDestination {
     override val route = "perform_workout"
     override val titleRes = R.string.perform_workout_title
     const val workoutIdArg = "workoutId"
+    const val routineIdArg = "routineId"
     val routeWithArgs = "$route/{$workoutIdArg}"
+    val routeWithRoutineArg = "$route?routineId={$routineIdArg}"
 }
 
 @Composable
