@@ -57,8 +57,14 @@ import com.example.liftassistant.ui.workout.PerformWorkoutDestination
 import com.example.liftassistant.ui.workout.PerformWorkoutScreen
 import com.example.liftassistant.ui.workout.WorkoutSummaryDestination
 import com.example.liftassistant.ui.workout.WorkoutSummaryScreen
+import com.example.liftassistant.ui.workout_routine.AddWorkoutRoutineDestination
+import com.example.liftassistant.ui.workout_routine.AddWorkoutRoutineScreen
+import com.example.liftassistant.ui.workout_routine.EditWorkoutRoutineDestination
+import com.example.liftassistant.ui.workout_routine.EditWorkoutRoutineScreen
+import com.example.liftassistant.ui.workout_routine.WorkoutRoutineDestination
 import com.example.liftassistant.ui.workout_routine.WorkoutRoutineListDestination
 import com.example.liftassistant.ui.workout_routine.WorkoutRoutineListScreen
+import com.example.liftassistant.ui.workout_routine.WorkoutRoutineScreen
 
 @Composable
 fun LiftAssistantNavHost(
@@ -76,7 +82,7 @@ fun LiftAssistantNavHost(
                     onBannerClick = {
                         homeUiState.inProgressWorkout?.let { workout ->
                             navController.navigate(
-                                "${PerformWorkoutDestination.route}/${workout.id}"
+                                "${PerformWorkoutDestination.routeWithArgs}/${workout.id}"
                             )
                         }
                     }
@@ -166,6 +172,51 @@ fun LiftAssistantNavHost(
             ) {
                 composable(route = WorkoutRoutineListDestination.route) {
                     WorkoutRoutineListScreen(
+                        navigateToAddWorkoutRoutine = {
+                            navController.navigate(AddWorkoutRoutineDestination.route)
+                        },
+                        navigateToWorkoutRoutine = { routineId ->
+                            navController.navigate(
+                                "${WorkoutRoutineDestination.route}/$routineId"
+                            )
+                        },
+                        navigateToEditWorkoutRoutine = { routineId ->
+                            navController.navigate(
+                                "${EditWorkoutRoutineDestination.route}/$routineId"
+                            )
+                        },
+                        onNavigateUp = { navController.navigateUp() }
+                    )
+                }
+                composable(
+                    route = WorkoutRoutineDestination.routeWithArgs,
+                    arguments = listOf(navArgument(WorkoutRoutineDestination.routineIdArg) {
+                        type = NavType.IntType
+                    })
+                ) {
+                    WorkoutRoutineScreen(
+                        navigateToEditWorkoutRoutine = { routineId ->
+                            navController.navigate(
+                                "${EditWorkoutRoutineDestination.route}/$routineId"
+                            )
+                        },
+                        onNavigateUp = { navController.navigateUp() }
+                    )
+                }
+                composable(route = AddWorkoutRoutineDestination.route) {
+                    AddWorkoutRoutineScreen(
+                        navigateBack = { navController.popBackStack() },
+                        onNavigateUp = { navController.navigateUp() }
+                    )
+                }
+                composable(
+                    route = EditWorkoutRoutineDestination.routeWithArgs,
+                    arguments = listOf(navArgument(EditWorkoutRoutineDestination.routineIdArg) {
+                        type = NavType.IntType
+                    })
+                ) {
+                    EditWorkoutRoutineScreen(
+                        navigateBack = { navController.popBackStack() },
                         onNavigateUp = { navController.navigateUp() }
                     )
                 }
@@ -206,7 +257,6 @@ fun LiftAssistantNavHost(
                 route = PerformWorkoutDestination.routeWithRoutineArg,
                 arguments = listOf(navArgument(PerformWorkoutDestination.routineIdArg) {
                     type = NavType.IntType
-                    nullable = false
                     defaultValue = -1
                 })
             ) {
@@ -244,7 +294,9 @@ private fun LiftAssistantBottomNavBar(
                     )
                 },
                 label = { Text(stringResource(item.titleRes)) },
-                selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
+                selected = currentDestination?.hierarchy?.any {
+                    it.route == item.route
+                } == true,
                 onClick = {
                     navController.navigate(item.route) {
                         popUpTo(navController.graph.findStartDestination().id) {

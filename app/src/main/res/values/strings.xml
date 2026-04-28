@@ -59,4 +59,13 @@
     <string name="not_logged">—</string>
     <string name="select_routine">Use a routine</string>
     <string name="start_freeform_workout">Start freeform workout</string>
+    <string name="add_routine">Add routine</string>
+    <string name="edit_routine">Edit routine</string>
+    <string name="delete_routine">Delete routine</string>
+    <string name="empty_routine_list">No routines yet. Add one to get started.</string>
+    <string name="delete_routine_confirmation">Are you sure you want to delete %s?</string>
+    <string name="workout_routine_title">Routine</string>
+    <string name="empty_routine_slots">No exercises in this routine yet. Tap edit to add some.</string>
+    <string name="flexible_slot">Flexible slot</string>
+    <string name="flexible_slot_label">Flexible</string>
 </resources>
