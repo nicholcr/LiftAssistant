@@ -11,9 +11,9 @@ import com.example.liftassistant.data.Exercise
 import com.example.liftassistant.data.ExerciseCategory
 import com.example.liftassistant.data.repos.CategoryRepository
 import com.example.liftassistant.data.repos.ExerciseRepository
+import com.example.liftassistant.data.repos.RoutineSlotRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 class EditExerciseViewModel(
     private val exerciseRepository: ExerciseRepository,
     private val categoryRepository: CategoryRepository,
+    private val routineSlotRepository: RoutineSlotRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -29,7 +30,9 @@ class EditExerciseViewModel(
         private const val TIMEOUT_MILLIS = 5_000L
     }
 
-    private val exerciseId: Int = checkNotNull(savedStateHandle[EditExerciseDestination.exerciseIdArg])
+    private val exerciseId: Int = checkNotNull(
+        savedStateHandle[EditExerciseDestination.exerciseIdArg]
+    )
 
     var formState by mutableStateOf(ExerciseFormState())
         private set
@@ -52,6 +55,8 @@ class EditExerciseViewModel(
                 name = exerciseWithCategories.exercise.name,
                 isBodyweight = exerciseWithCategories.exercise.isBodyweight,
                 selectedCategories = exerciseWithCategories.categories,
+                prWeight = exerciseWithCategories.exercise.prWeight,
+                latestWeight = exerciseWithCategories.exercise.latestWeight,
                 isValid = true
             )
         }
@@ -87,4 +92,40 @@ class EditExerciseViewModel(
             exerciseRepository.insertAllExerciseCategories(exerciseCategories)
         }
     }
+
+    suspend fun addCategory(name: String) {
+        if (name.isBlank()) return
+        categoryRepository.insertCategory(Category(name = name.trim()))
+    }
+
+    suspend fun deleteCategory(category: Category) {
+        categoryRepository.deleteCategory(category)
+        formState = formState.copy(
+            selectedCategories = formState.selectedCategories.filter {
+                it.id != category.id
+            }
+        )
+    }
+
+    suspend fun renameCategory(category: Category, newName: String) {
+        if (newName.isBlank()) return
+        val updatedCategory = category.copy(name = newName.trim())
+        categoryRepository.updateCategory(updatedCategory)
+        updateRoutineSlotsForRename(category.name, newName.trim())
+        formState = formState.copy(
+            selectedCategories = formState.selectedCategories.map {
+                if (it.id == category.id) updatedCategory else it
+            }
+        )
+    }
+
+    private suspend fun updateRoutineSlotsForRename(oldName: String, newName: String) {
+        val slots = routineSlotRepository.getAllSlotsWithCategoryLabel(oldName)
+        slots.forEach { slot ->
+            routineSlotRepository.updateRoutineSlot(slot.copy(categoryLabel = newName))
+        }
+    }
+
+    suspend fun getExerciseCountForCategory(categoryId: Int): Int =
+        categoryRepository.getExerciseCountForCategory(categoryId)
 }

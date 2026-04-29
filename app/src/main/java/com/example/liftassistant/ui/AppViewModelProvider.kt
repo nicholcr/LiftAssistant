@@ -39,13 +39,15 @@ object AppViewModelProvider {
         initializer {
             AddExerciseViewModel(
                 liftAssistantApplication().container.exerciseRepository,
-                liftAssistantApplication().container.categoryRepository
+                liftAssistantApplication().container.categoryRepository,
+                liftAssistantApplication().container.routineSlotRepository
             )
         }
         initializer {
             EditExerciseViewModel(
                 liftAssistantApplication().container.exerciseRepository,
                 liftAssistantApplication().container.categoryRepository,
+                liftAssistantApplication().container.routineSlotRepository,
                 this.createSavedStateHandle()
             )
         }

@@ -11,4 +11,5 @@ interface RoutineSlotRepository {
     suspend fun updateRoutineSlot(routineSlot: RoutineSlot)
     suspend fun deleteRoutineSlot(routineSlot: RoutineSlot)
     suspend fun deleteAllSlotsForRoutine(routineId: Int)
+    suspend fun getAllSlotsWithCategoryLabel(categoryLabel: String): List<RoutineSlot>
 }

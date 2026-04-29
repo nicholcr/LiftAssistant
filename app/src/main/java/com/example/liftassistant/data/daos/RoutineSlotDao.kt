@@ -31,4 +31,7 @@ interface RoutineSlotDao {
 
     @Query("DELETE FROM routine_slots WHERE routineId = :routineId")
     suspend fun deleteAllSlotsForRoutine(routineId: Int)
+
+    @Query("SELECT * FROM routine_slots WHERE categoryLabel = :categoryLabel")
+    suspend fun getAllSlotsWithCategoryLabel(categoryLabel: String): List<RoutineSlot>
 }

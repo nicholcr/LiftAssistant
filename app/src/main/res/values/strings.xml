@@ -91,4 +91,12 @@
     <string name="dismiss">Dismiss</string>
     <string name="search_or_select_exercise">Search or select exercise…</string>
     <string name="select_exercise_for_slot">Select exercise for %s</string>
+    <string name="manage_categories">Manage categories</string>
+    <string name="new_category_name">New category name…</string>
+    <string name="add_category">Add category</string>
+    <string name="delete_category">Delete category</string>
+    <string name="delete_category_confirmation">Are you sure you want to delete "%s"?</string>
+    <string name="delete_category_warning">"%s" is assigned to %d exercise(s). Deleting it will remove it from those exercises. Are you sure?</string>
+    <string name="done">Done</string>
+    <string name="rename_category">Rename category</string>
 </resources>

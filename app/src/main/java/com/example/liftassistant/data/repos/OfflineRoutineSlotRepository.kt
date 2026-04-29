@@ -27,4 +27,7 @@ class OfflineRoutineSlotRepository(
 
     override suspend fun deleteAllSlotsForRoutine(routineId: Int) =
         routineSlotDao.deleteAllSlotsForRoutine(routineId)
+
+    override suspend fun getAllSlotsWithCategoryLabel(categoryLabel: String): List<RoutineSlot> =
+        routineSlotDao.getAllSlotsWithCategoryLabel(categoryLabel)
 }
