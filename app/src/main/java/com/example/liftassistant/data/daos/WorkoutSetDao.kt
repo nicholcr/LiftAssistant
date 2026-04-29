@@ -23,6 +23,6 @@ interface WorkoutSetDao {
     @Delete
     suspend fun delete(workoutSet: WorkoutSet)
 
-    @Query("SELECT * FROM workout_sets WHERE workoutExerciseId = :workoutExerciseId ORDER BY 'order' ASC")
+    @Query("SELECT * FROM workout_sets WHERE workoutExerciseId = :workoutExerciseId ORDER BY `order` ASC")
     fun getSetsForWorkoutExercise(workoutExerciseId: Int): Flow<List<WorkoutSet>>
 }

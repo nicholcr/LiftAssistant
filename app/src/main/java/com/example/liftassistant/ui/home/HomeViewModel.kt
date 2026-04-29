@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /**
  * ViewModel to retrieve all past workouts in the Room database.
@@ -39,6 +40,14 @@ class HomeViewModel(
         started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
         initialValue = HomeUiState()
     )
+
+    fun discardInProgressWorkout() {
+        viewModelScope.launch {
+            homeUiState.value.inProgressWorkout?.let { workout ->
+                workoutRepository.deleteWorkout(workout)
+            }
+        }
+    }
 }
 
 data class HomeUiState(

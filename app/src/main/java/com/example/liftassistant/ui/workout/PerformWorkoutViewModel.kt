@@ -34,13 +34,20 @@ data class WorkoutExerciseItem(
     val setScheme: String? = null
 )
 
+data class UnresolvedSlotItem(
+    val routineSlot: RoutineSlot,
+    val availableExercises: List<ExerciseWithCategories>
+)
+
 data class PerformWorkoutUiState(
     val workout: Workout? = null,
     val exerciseItems: List<WorkoutExerciseItem> = emptyList(),
+    val unresolvedSlots: List<UnresolvedSlotItem> = emptyList(),
     val availableExercises: List<ExerciseWithCategories> = emptyList(),
     val isSaving: Boolean = false,
     val isComplete: Boolean = false
 )
+
 class PerformWorkoutViewModel(
     private val workoutRepository: WorkoutRepository,
     private val workoutExerciseRepository: WorkoutExerciseRepository,
@@ -88,54 +95,72 @@ class PerformWorkoutViewModel(
     }
 
     private suspend fun createNewWorkout(routineId: Int? = null) {
-        val routineName = routineId?.let { id ->
-            routineSlotRepository.getSlotsForRoutineStream(id).first()
-            null
-        }
-        val workout = Workout(name = generateWorkoutName(routineName))
-        val newWorkoutId = workoutRepository.insertWorkout(workout)
-        val newWorkout = workoutRepository.getWorkoutStream(newWorkoutId.toInt())
-            .filterNotNull()
-            .first()
         val availableExercises = exerciseRepository
             .getAllExercisesWithCategoriesStream()
             .first()
-        val exerciseItems = if (routineId != null) {
+
+        val workout = Workout(name = generateWorkoutName())
+        val newWorkoutId = workoutRepository.insertWorkout(workout)
+        val newWorkout = workoutRepository
+            .getWorkoutStream(newWorkoutId.toInt())
+            .filterNotNull()
+            .first()
+
+        val exerciseItems = mutableListOf<WorkoutExerciseItem>()
+        val unresolvedSlots = mutableListOf<UnresolvedSlotItem>()
+
+        if (routineId != null) {
             val slots = routineSlotRepository
                 .getSlotsForRoutineStream(routineId)
                 .first()
-            slots.mapIndexedNotNull { index, slot ->
-                slot.fixedExerciseId?.let { exerciseId ->
-                    val workoutExercise = WorkoutExercise(
-                        workoutId = newWorkoutId.toInt(),
-                        exerciseId = exerciseId,
-                        order = index,
-                        routineSlotId = slot.id
-                    )
-                    val weId = workoutExerciseRepository
-                        .insertWorkoutExercise(workoutExercise)
-                    val sets = prePopulateSets(slot, weId.toInt())
-                    val exerciseWithCategories = exerciseRepository
-                        .getExerciseWithCategoriesStream(exerciseId)
-                        .filterNotNull()
-                        .first()
-                    WorkoutExerciseItem(
-                        workoutExercise = workoutExercise.copy(id = weId.toInt()),
-                        exercise = exerciseWithCategories.exercise,
-                        categories = exerciseWithCategories.categories.map { it.name },
-                        sets = sets,
-                        setScheme = slot.setScheme
-                    )
+
+            slots.forEachIndexed { index, slot ->
+                when {
+                    slot.fixedExerciseId != null -> {
+                        val workoutExercise = WorkoutExercise(
+                            workoutId = newWorkoutId.toInt(),
+                            exerciseId = slot.fixedExerciseId,
+                            order = index,
+                            routineSlotId = slot.id
+                        )
+                        val weId = workoutExerciseRepository
+                            .insertWorkoutExercise(workoutExercise)
+                        val sets = prePopulateSets(slot, weId.toInt())
+                        val exerciseWithCategories = exerciseRepository
+                            .getExerciseWithCategoriesStream(slot.fixedExerciseId)
+                            .filterNotNull()
+                            .first()
+                        exerciseItems.add(
+                            WorkoutExerciseItem(
+                                workoutExercise = workoutExercise.copy(id = weId.toInt()),
+                                exercise = exerciseWithCategories.exercise,
+                                categories = exerciseWithCategories.categories.map { it.name },
+                                sets = sets,
+                                setScheme = slot.setScheme
+                            )
+                        )
+                    }
+                    slot.categoryLabel != null -> {
+                        val filteredExercises = availableExercises.filter { ewc ->
+                            ewc.categories.any { it.name == slot.categoryLabel }
+                        }
+                        unresolvedSlots.add(
+                            UnresolvedSlotItem(
+                                routineSlot = slot,
+                                availableExercises = filteredExercises
+                                    .ifEmpty { availableExercises }
+                            )
+                        )
+                    }
                 }
             }
-        } else {
-            emptyList()
         }
 
         _uiState.update {
             it.copy(
                 workout = newWorkout,
                 exerciseItems = exerciseItems,
+                unresolvedSlots = unresolvedSlots,
                 availableExercises = availableExercises
             )
         }
@@ -341,6 +366,35 @@ class PerformWorkoutViewModel(
             _uiState.update { it.copy(isSaving = true) }
             workoutRepository.setEndTime(workoutId, Date())
             _uiState.update { it.copy(isSaving = false, isComplete = true) }
+        }
+    }
+
+    fun resolveSlot(unresolvedSlot: UnresolvedSlotItem, exerciseWithCategories: ExerciseWithCategories) {
+        viewModelScope.launch {
+            val workoutId = _uiState.value.workout?.id ?: return@launch
+            val order = _uiState.value.exerciseItems.size +
+                    _uiState.value.unresolvedSlots.indexOf(unresolvedSlot)
+            val workoutExercise = WorkoutExercise(
+                workoutId = workoutId,
+                exerciseId = exerciseWithCategories.exercise.id,
+                order = order,
+                routineSlotId = unresolvedSlot.routineSlot.id
+            )
+            val weId = workoutExerciseRepository.insertWorkoutExercise(workoutExercise)
+            val sets = prePopulateSets(unresolvedSlot.routineSlot, weId.toInt())
+            val newItem = WorkoutExerciseItem(
+                workoutExercise = workoutExercise.copy(id = weId.toInt()),
+                exercise = exerciseWithCategories.exercise,
+                categories = exerciseWithCategories.categories.map { it.name },
+                sets = sets,
+                setScheme = unresolvedSlot.routineSlot.setScheme
+            )
+            _uiState.update { state ->
+                state.copy(
+                    exerciseItems = state.exerciseItems + newItem,
+                    unresolvedSlots = state.unresolvedSlots - unresolvedSlot
+                )
+            }
         }
     }
 

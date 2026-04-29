@@ -138,6 +138,7 @@ fun PerformWorkoutScreen(
                 onUpdateSet = viewModel::updateSet,
                 onDeleteSet = viewModel::deleteSet,
                 onReorder = viewModel::reorderExercises,
+                onResolveSlot = viewModel::resolveSlot,
                 contentPadding = innerPadding,
                 modifier = Modifier.fillMaxSize()
             )
@@ -175,9 +176,10 @@ private fun PerformWorkoutContent(
     uiState: PerformWorkoutUiState,
     onEndWorkoutClick: () -> Unit,
     onAddSet: (Int) -> Unit,
-    onUpdateSet: (com.example.liftassistant.data.WorkoutSet) -> Unit,
-    onDeleteSet: (com.example.liftassistant.data.WorkoutSet) -> Unit,
+    onUpdateSet: (WorkoutSet) -> Unit,
+    onDeleteSet: (WorkoutSet) -> Unit,
     onReorder: (Int, Int) -> Unit,
+    onResolveSlot: (UnresolvedSlotItem, ExerciseWithCategories) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
@@ -220,8 +222,23 @@ private fun PerformWorkoutContent(
                     },
                     onMoveDown = {
                         val index = uiState.exerciseItems.indexOf(exerciseItem)
-                        if (index < uiState.exerciseItems.size - 1) onReorder(index, index + 1)
+                        if (index < uiState.exerciseItems.size - 1)
+                            onReorder(index, index + 1)
                     }
+                )
+            }
+            items(
+                items = uiState.unresolvedSlots,
+                key = { it.routineSlot.id }
+            ) { unresolvedSlot ->
+                UnresolvedSlotCard(
+                    unresolvedSlot = unresolvedSlot,
+                    onExerciseSelected = { exercise ->
+                        onResolveSlot(unresolvedSlot, exercise)
+                    },
+                    modifier = Modifier.padding(
+                        dimensionResource(R.dimen.padding_small)
+                    )
                 )
             }
         }
@@ -796,6 +813,157 @@ private fun TimerDurationPickerDialog(
             }
         }
     )
+}
+
+@Composable
+private fun UnresolvedSlotCard(
+    unresolvedSlot: UnresolvedSlotItem,
+    onExerciseSelected: (ExerciseWithCategories) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showExercisePicker by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredExercises = remember(unresolvedSlot.availableExercises, searchQuery) {
+        if (searchQuery.isBlank()) unresolvedSlot.availableExercises
+        else unresolvedSlot.availableExercises.filter {
+            it.exercise.name.contains(searchQuery, ignoreCase = true)
+        }
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(dimensionResource(R.dimen.padding_medium)),
+            verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.padding_small))
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = unresolvedSlot.routineSlot.categoryLabel
+                            ?: stringResource(R.string.flexible_slot),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = unresolvedSlot.routineSlot.setScheme,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.flexible_slot_label),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            unresolvedSlot.routineSlot.note?.let { note ->
+                Text(
+                    text = note,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = {
+                    Text(stringResource(R.string.search_or_select_exercise))
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showExercisePicker = true },
+                readOnly = true,
+                enabled = false
+            )
+        }
+    }
+
+    if (showExercisePicker) {
+        AlertDialog(
+            onDismissRequest = { showExercisePicker = false },
+            title = {
+                Text(
+                    stringResource(
+                        R.string.select_exercise_for_slot,
+                        unresolvedSlot.routineSlot.categoryLabel
+                            ?: stringResource(R.string.flexible_slot)
+                    )
+                )
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(
+                        dimensionResource(R.dimen.padding_small)
+                    )
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text(stringResource(R.string.search_exercises)) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    LazyColumn(
+                        modifier = Modifier.weight(1f, fill = false)
+                    ) {
+                        items(
+                            items = filteredExercises,
+                            key = { it.exercise.id }
+                        ) { exerciseWithCategories ->
+                            TextButton(
+                                onClick = {
+                                    onExerciseSelected(exerciseWithCategories)
+                                    showExercisePicker = false
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalAlignment = Alignment.Start
+                                ) {
+                                    Text(
+                                        text = exerciseWithCategories.exercise.name,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    if (exerciseWithCategories.categories.isNotEmpty()) {
+                                        Text(
+                                            text = exerciseWithCategories.categories
+                                                .joinToString(", ") { it.name },
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                            HorizontalDivider()
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showExercisePicker = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
 }
 
 private fun formatTimerSeconds(totalSeconds: Int): String {
