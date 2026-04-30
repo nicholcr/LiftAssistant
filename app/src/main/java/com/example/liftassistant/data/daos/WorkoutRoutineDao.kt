@@ -1,5 +1,6 @@
 package com.example.liftassistant.data.daos
 
+import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -8,6 +9,7 @@ import androidx.room.Update
 import com.example.liftassistant.data.WorkoutRoutine
 import kotlinx.coroutines.flow.Flow
 
+@Dao
 interface WorkoutRoutineDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(workoutRoutine: WorkoutRoutine): Long

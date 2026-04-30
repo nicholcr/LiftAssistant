@@ -60,6 +60,10 @@ fun EditExerciseScreen(
                     navigateBack()
                 }
             },
+            onAddCategory = viewModel::addCategory,
+            onDeleteCategory = viewModel::deleteCategory,
+            onRenameCategory = viewModel::renameCategory,
+            onGetExerciseCount = viewModel::getExerciseCountForCategory,
             modifier = Modifier.padding(innerPadding)
         )
     }
@@ -77,6 +81,8 @@ private fun EditExerciseScreenPreview() {
                     Category(id = 1, name = "Push"),
                     Category(id = 5, name = "Chest")
                 ),
+                prWeight = 185f,
+                latestWeight = 175f,
                 isValid = true
             ),
             availableCategories = listOf(
@@ -88,7 +94,11 @@ private fun EditExerciseScreenPreview() {
                 Category(id = 6, name = "Biceps")
             ),
             onFormStateChange = {},
-            onSaveClick = {}
+            onSaveClick = {},
+            onAddCategory = {},
+            onDeleteCategory = {},
+            onRenameCategory = { _, _ -> },
+            onGetExerciseCount = { 0 }
         )
     }
 }

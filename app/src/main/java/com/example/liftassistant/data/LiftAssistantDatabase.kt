@@ -5,7 +5,6 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.liftassistant.data.daos.CategoryDao
 import com.example.liftassistant.data.daos.ExerciseDao
@@ -21,7 +20,9 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [
+        Category::class,
         Exercise::class,
+        ExerciseCategory::class,
         WorkoutRoutine::class,
         RoutineSlot::class,
         Workout::class,

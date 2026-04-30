@@ -72,24 +72,11 @@ class EditExerciseViewModel(
 
     suspend fun saveExercise() {
         if (!validateInput(formState)) return
-        exerciseRepository.updateExercise(
-            Exercise(
-                id = exerciseId,
-                name = formState.name.trim(),
-                isBodyweight = formState.isBodyweight,
-                prWeight = formState.prWeight,
-                latestWeight = formState.latestWeight
-            )
-        )
+        exerciseRepository.updateExercise(formState.toExercise(id = exerciseId))
         exerciseRepository.deleteAllCategoriesForExercise(exerciseId)
-        val exerciseCategories = formState.selectedCategories.map { category ->
-            ExerciseCategory(
-                exerciseId = exerciseId,
-                categoryId = category.id
-            )
-        }
-        if (exerciseCategories.isNotEmpty()) {
-            exerciseRepository.insertAllExerciseCategories(exerciseCategories)
+        val categories = formState.toExerciseCategoryList(exerciseId)
+        if (categories.isNotEmpty()) {
+            exerciseRepository.insertAllExerciseCategories(categories)
         }
     }
 

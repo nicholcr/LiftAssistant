@@ -47,20 +47,10 @@ class AddExerciseViewModel(
 
     suspend fun saveExercise() {
         if (!validateInput(formState)) return
-        val exerciseId = exerciseRepository.insertExercise(
-            Exercise(
-                name = formState.name.trim(),
-                isBodyweight = formState.isBodyweight
-            )
-        )
-        val exerciseCategories = formState.selectedCategories.map { category ->
-            ExerciseCategory(
-                exerciseId = exerciseId.toInt(),
-                categoryId = category.id
-            )
-        }
-        if (exerciseCategories.isNotEmpty()) {
-            exerciseRepository.insertAllExerciseCategories(exerciseCategories)
+        val exerciseId = exerciseRepository.insertExercise(formState.toExercise())
+        val categories = formState.toExerciseCategoryList(exerciseId.toInt())
+        if (categories.isNotEmpty()) {
+            exerciseRepository.insertAllExerciseCategories(categories)
         }
     }
 
