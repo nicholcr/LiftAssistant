@@ -28,6 +28,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -94,12 +95,16 @@ fun ExerciseListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = navigateToAddExercise) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.add_exercise)
-                )
-            }
+            ExtendedFloatingActionButton(
+                onClick = navigateToAddExercise,
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.add_exercise)
+                    )
+                },
+                text = { Text(stringResource(R.string.add_exercise)) }
+            )
         }
     ) { innerPadding ->
         ExerciseListBody(

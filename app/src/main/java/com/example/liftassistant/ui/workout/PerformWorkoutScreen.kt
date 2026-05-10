@@ -3,9 +3,9 @@
 package com.example.liftassistant.ui.workout
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -47,7 +47,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -62,8 +67,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -82,6 +89,7 @@ import com.example.liftassistant.ui.theme.LiftAssistantTheme
 import kotlinx.coroutines.delay
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import java.util.Date
 
 object PerformWorkoutDestination : NavigationDestination {
     override val route = "perform_workout"
@@ -101,12 +109,22 @@ fun PerformWorkoutScreen(
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val uiState by viewModel.uiState.collectAsState()
+    var elapsedSeconds by remember { mutableStateOf(0) }
     var showEndWorkoutDialog by remember { mutableStateOf(false) }
     var showAddExerciseDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.isComplete) {
         if (uiState.isComplete) {
             uiState.workout?.id?.let { navigateToWorkoutSummary(it) }
+        }
+    }
+
+    LaunchedEffect(uiState.workout) {
+        uiState.workout?.let { workout ->
+            while (true) {
+                elapsedSeconds = ((Date().time - workout.date.time) / 1000).toInt()
+                delay(1000L)
+            }
         }
     }
 
@@ -119,8 +137,15 @@ fun PerformWorkoutScreen(
                         Text(
                             text = uiState.workout?.name
                                 ?: stringResource(PerformWorkoutDestination.titleRes),
-                            style = MaterialTheme.typography.titleMedium
+                            style = MaterialTheme.typography.titleSmall
                         )
+                        if (uiState.workout != null) {
+                            Text(
+                                text = formatElapsedTime(elapsedSeconds),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 },
                 navigationIcon = {
@@ -217,7 +242,7 @@ private fun PerformWorkoutContent(
     val lazyListState = rememberLazyListState()
     val reorderableLazyListState = rememberReorderableLazyListState(
         lazyListState = lazyListState,
-        onMove = { from, to -> onReorder(from.index - 1, to.index - 1) }
+        onMove = { from, to -> onReorder(from.index, to.index) }
     )
 
     Column(modifier = modifier) {
@@ -233,11 +258,11 @@ private fun PerformWorkoutContent(
         ) {
             items(
                 items = uiState.exerciseItems,
-                key = { it.workoutExercise.id }
+                key = { "exercise_${it.workoutExercise.id}" }
             ) { exerciseItem ->
                 ReorderableItem(
                     state = reorderableLazyListState,
-                    key = exerciseItem.workoutExercise.id
+                    key = "exercise_${exerciseItem.workoutExercise.id}"
                 ) { isDragging ->
                     WorkoutExerciseCard(
                         exerciseItem = exerciseItem,
@@ -260,7 +285,7 @@ private fun PerformWorkoutContent(
             }
             items(
                 items = uiState.unresolvedSlots,
-                key = { it.routineSlot.id }
+                key = { "slot_${it.routineSlot.id}" }
             ) { unresolvedSlot ->
                 UnresolvedSlotCard(
                     unresolvedSlot = unresolvedSlot,
@@ -732,20 +757,27 @@ private fun RestTimerFab(
     var isRunning by rememberSaveable { mutableStateOf(false) }
     var showDurationPicker by remember { mutableStateOf(false) }
 
-    LaunchedEffect(isRunning) {
-        if (isRunning) {
-            while (remainingSeconds > 0) {
-                delay(1000L)
-                remainingSeconds--
-            }
+    LaunchedEffect(isRunning, remainingSeconds) {
+        if (isRunning && remainingSeconds > 0) {
+            delay(1000L)
+            remainingSeconds--
+        } else if (isRunning && remainingSeconds == 0) {
             isRunning = false
         }
     }
 
-    Box(modifier = modifier) {
-        FloatingActionButton(
-            onClick = {},
-            modifier = Modifier.combinedClickable(
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(56.dp)
+            .clip(CircleShape)
+            .background(
+                if (isRunning)
+                    MaterialTheme.colorScheme.primaryContainer
+                else
+                    MaterialTheme.colorScheme.secondaryContainer
+            )
+            .combinedClickable(
                 onClick = {
                     if (isRunning) {
                         isRunning = false
@@ -756,41 +788,38 @@ private fun RestTimerFab(
                     }
                 },
                 onLongClick = { showDurationPicker = true }
-            ),
-            containerColor = if (isRunning)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.secondaryContainer
-        ) {
-            if (isRunning) {
-                Box(contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(
-                        progress = remainingSeconds.toFloat() / timerDurationSeconds.toFloat(),
-                        modifier = Modifier.size(48.dp),
-                        strokeWidth = 3.dp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = formatTimerSeconds(remainingSeconds),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            } else {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Timer,
-                        contentDescription = stringResource(R.string.rest_timer),
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = formatTimerSeconds(timerDurationSeconds),
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                }
+            )
+    ) {
+        if (isRunning) {
+            CircularProgressIndicator(
+                progress = { remainingSeconds.toFloat() / timerDurationSeconds.toFloat() },
+                modifier = Modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.primary,
+                strokeWidth = 3.dp,
+                trackColor = ProgressIndicatorDefaults.circularTrackColor,
+                strokeCap = ProgressIndicatorDefaults.CircularDeterminateStrokeCap
+            )
+            Text(
+                text = formatTimerSeconds(remainingSeconds),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        } else {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Timer,
+                    contentDescription = stringResource(R.string.rest_timer),
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Text(
+                    text = formatTimerSeconds(timerDurationSeconds),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
             }
         }
     }
@@ -1029,6 +1058,17 @@ private fun formatTimerSeconds(totalSeconds: Int): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return "%d:%02d".format(minutes, seconds)
+}
+
+private fun formatElapsedTime(totalSeconds: Int): String {
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%02d:%02d".format(minutes, seconds)
+    }
 }
 
 @Preview(showBackground = true)

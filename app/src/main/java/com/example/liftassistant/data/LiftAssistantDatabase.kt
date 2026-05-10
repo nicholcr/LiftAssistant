@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
         WorkoutSet::class
     ],
     version = 1,
-    exportSchema = false
+    exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class LiftAssistantDatabase : RoomDatabase() {
@@ -63,6 +63,10 @@ abstract class LiftAssistantDatabase : RoomDatabase() {
                     LiftAssistantDatabase::class.java,
                     "lift_assistant_database"
                 )
+                    .addMigrations(
+                        // Add future migrations here as they are created
+                        // e.g. MIGRATION_1_2, MIGRATION_2_3
+                    )
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)

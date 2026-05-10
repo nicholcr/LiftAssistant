@@ -80,8 +80,15 @@ fun LiftAssistantNavHost(
 ) {
     val homeViewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val homeUiState by homeViewModel.homeUiState.collectAsState()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
     var showResumeWorkoutDialog by remember { mutableStateOf(false) }
     var hasShownResumeDialog by remember { mutableStateOf(false) }
+
+    val showBanner = homeUiState.inProgressWorkout != null &&
+            currentRoute != PerformWorkoutDestination.route &&
+            currentRoute != PerformWorkoutDestination.routeWithArgs &&
+            currentRoute != PerformWorkoutDestination.routeWithRoutineArg
 
     LaunchedEffect(homeUiState.inProgressWorkout) {
         if (homeUiState.inProgressWorkout != null && !hasShownResumeDialog) {
@@ -94,11 +101,11 @@ fun LiftAssistantNavHost(
         bottomBar = {
             Column {
                 ActiveWorkoutBanner(
-                    inProgressWorkout = homeUiState.inProgressWorkout,
+                    inProgressWorkout = if (showBanner) homeUiState.inProgressWorkout else null,
                     onBannerClick = {
                         homeUiState.inProgressWorkout?.let { workout ->
                             navController.navigate(
-                                "${PerformWorkoutDestination.routeWithArgs}/${workout.id}"
+                                "${PerformWorkoutDestination.route}/${workout.id}"
                             )
                         }
                     }
@@ -299,7 +306,7 @@ fun LiftAssistantNavHost(
                 onResume = {
                     showResumeWorkoutDialog = false
                     navController.navigate(
-                        "${PerformWorkoutDestination.routeWithArgs}/${workout.id}"
+                        "${PerformWorkoutDestination.route}/${workout.id}"
                     )
                 },
                 onDiscard = {

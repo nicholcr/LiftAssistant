@@ -117,15 +117,19 @@ class PerformWorkoutViewModel(
             slots.forEachIndexed { index, slot ->
                 when {
                     slot.fixedExerciseId != null -> {
+                        android.util.Log.d("LiftAssistant", "Slot id=${slot.id}, fixedExerciseId=${slot.fixedExerciseId}, routineId=${slot.routineId}")
                         val workoutExercise = WorkoutExercise(
                             workoutId = newWorkoutId.toInt(),
                             exerciseId = slot.fixedExerciseId,
                             order = index,
                             routineSlotId = slot.id
                         )
+                        android.util.Log.d("LiftAssistant", "Inserting WorkoutExercise: workoutId=${newWorkoutId.toInt()}, exerciseId=${slot.fixedExerciseId}")
                         val weId = workoutExerciseRepository
                             .insertWorkoutExercise(workoutExercise)
+                        android.util.Log.d("LiftAssistant", "WorkoutExercise inserted with id=$weId")
                         val sets = prePopulateSets(slot, weId.toInt())
+                        android.util.Log.d("LiftAssistant", "Sets pre-populated: ${sets.size}")
                         val exerciseWithCategories = exerciseRepository
                             .getExerciseWithCategoriesStream(slot.fixedExerciseId)
                             .filterNotNull()
@@ -342,10 +346,14 @@ class PerformWorkoutViewModel(
     }
 
     fun reorderExercises(fromIndex: Int, toIndex: Int) {
-        val currentItems = _uiState.value.exerciseItems.toMutableList()
-        val item = currentItems.removeAt(fromIndex)
-        currentItems.add(toIndex, item)
-        val reorderedItems = currentItems.mapIndexed { index, exerciseItem ->
+        val currentItems = _uiState.value.exerciseItems
+        if (fromIndex < 0 || fromIndex >= currentItems.size ||
+            toIndex < 0 || toIndex >= currentItems.size) return
+
+        val mutableItems = currentItems.toMutableList()
+        val item = mutableItems.removeAt(fromIndex)
+        mutableItems.add(toIndex, item)
+        val reorderedItems = mutableItems.mapIndexed { index, exerciseItem ->
             exerciseItem.copy(
                 workoutExercise = exerciseItem.workoutExercise.copy(order = index)
             )
