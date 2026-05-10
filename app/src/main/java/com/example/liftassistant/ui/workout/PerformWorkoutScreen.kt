@@ -19,11 +19,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
@@ -33,6 +36,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -41,6 +45,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -73,6 +80,8 @@ import com.example.liftassistant.ui.AppViewModelProvider
 import com.example.liftassistant.ui.navigation.NavigationDestination
 import com.example.liftassistant.ui.theme.LiftAssistantTheme
 import kotlinx.coroutines.delay
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 object PerformWorkoutDestination : NavigationDestination {
     override val route = "perform_workout"
@@ -104,11 +113,35 @@ fun PerformWorkoutScreen(
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            LiftAssistantTopAppBar(
-                title = uiState.workout?.name ?: stringResource(PerformWorkoutDestination.titleRes),
-                canNavigateBack = true,
-                scrollBehavior = scrollBehavior,
-                navigateUp = navigateBack
+            CenterAlignedTopAppBar(
+                title = {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = uiState.workout?.name
+                                ?: stringResource(PerformWorkoutDestination.titleRes),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = navigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back_button)
+                        )
+                    }
+                },
+                actions = {
+                    TextButton(
+                        onClick = { showEndWorkoutDialog = true },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text(stringResource(R.string.end_workout))
+                    }
+                },
+                scrollBehavior = scrollBehavior
             )
         },
         floatingActionButton = {
@@ -133,7 +166,6 @@ fun PerformWorkoutScreen(
         } else {
             PerformWorkoutContent(
                 uiState = uiState,
-                onEndWorkoutClick = { showEndWorkoutDialog = true },
                 onAddSet = viewModel::addSet,
                 onUpdateSet = viewModel::updateSet,
                 onDeleteSet = viewModel::deleteSet,
@@ -174,7 +206,6 @@ fun PerformWorkoutScreen(
 @Composable
 private fun PerformWorkoutContent(
     uiState: PerformWorkoutUiState,
-    onEndWorkoutClick: () -> Unit,
     onAddSet: (Int) -> Unit,
     onUpdateSet: (WorkoutSet) -> Unit,
     onDeleteSet: (WorkoutSet) -> Unit,
@@ -183,22 +214,15 @@ private fun PerformWorkoutContent(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
+    val lazyListState = rememberLazyListState()
+    val reorderableLazyListState = rememberReorderableLazyListState(
+        lazyListState = lazyListState,
+        onMove = { from, to -> onReorder(from.index - 1, to.index - 1) }
+    )
+
     Column(modifier = modifier) {
-        Button(
-            onClick = onEndWorkoutClick,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.error
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(
-                    horizontal = dimensionResource(R.dimen.padding_medium),
-                    vertical = dimensionResource(R.dimen.padding_small)
-                )
-        ) {
-            Text(stringResource(R.string.end_workout))
-        }
         LazyColumn(
+            state = lazyListState,
             contentPadding = contentPadding,
             verticalArrangement = Arrangement.spacedBy(
                 dimensionResource(R.dimen.padding_small)
@@ -211,21 +235,28 @@ private fun PerformWorkoutContent(
                 items = uiState.exerciseItems,
                 key = { it.workoutExercise.id }
             ) { exerciseItem ->
-                WorkoutExerciseCard(
-                    exerciseItem = exerciseItem,
-                    onAddSet = { onAddSet(exerciseItem.workoutExercise.id) },
-                    onUpdateSet = onUpdateSet,
-                    onDeleteSet = onDeleteSet,
-                    onMoveUp = {
-                        val index = uiState.exerciseItems.indexOf(exerciseItem)
-                        if (index > 0) onReorder(index, index - 1)
-                    },
-                    onMoveDown = {
-                        val index = uiState.exerciseItems.indexOf(exerciseItem)
-                        if (index < uiState.exerciseItems.size - 1)
-                            onReorder(index, index + 1)
-                    }
-                )
+                ReorderableItem(
+                    state = reorderableLazyListState,
+                    key = exerciseItem.workoutExercise.id
+                ) { isDragging ->
+                    WorkoutExerciseCard(
+                        exerciseItem = exerciseItem,
+                        onAddSet = { onAddSet(exerciseItem.workoutExercise.id) },
+                        onUpdateSet = onUpdateSet,
+                        onDeleteSet = onDeleteSet,
+                        dragHandle = {
+                            Icon(
+                                imageVector = Icons.Default.DragHandle,
+                                contentDescription = stringResource(R.string.drag_to_reorder),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.draggableHandle()
+                            )
+                        },
+                        modifier = Modifier.padding(
+                            dimensionResource(R.dimen.padding_small)
+                        )
+                    )
+                }
             }
             items(
                 items = uiState.unresolvedSlots,
@@ -388,8 +419,7 @@ private fun WorkoutExerciseCard(
     onAddSet: () -> Unit,
     onUpdateSet: (WorkoutSet) -> Unit,
     onDeleteSet: (WorkoutSet) -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
+    dragHandle: @Composable () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -399,8 +429,7 @@ private fun WorkoutExerciseCard(
         Column {
             ExerciseCardHeader(
                 exerciseItem = exerciseItem,
-                onMoveUp = onMoveUp,
-                onMoveDown = onMoveDown
+                dragHandle = dragHandle
             )
             HorizontalDivider()
             ExerciseCardSetRows(
@@ -417,8 +446,7 @@ private fun WorkoutExerciseCard(
 @Composable
 private fun ExerciseCardHeader(
     exerciseItem: WorkoutExerciseItem,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
+    dragHandle: @Composable () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -466,22 +494,7 @@ private fun ExerciseCardHeader(
                 }
             }
         }
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            IconButton(onClick = onMoveUp) {
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowUp,
-                    contentDescription = stringResource(R.string.move_up)
-                )
-            }
-            IconButton(onClick = onMoveDown) {
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = stringResource(R.string.move_down)
-                )
-            }
-        }
+        dragHandle()
     }
 }
 
@@ -583,15 +596,17 @@ private fun SetRow(
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.width(32.dp)
         )
-        OutlinedTextField(
+        BasicTextField(
             value = weightText,
             onValueChange = { weightText = it },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
-            placeholder = { Text("0") },
+            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                color = MaterialTheme.colorScheme.onSurface
+            ),
             modifier = Modifier
                 .weight(1f)
-                .height(56.dp)
+                .height(35.dp)
                 .onFocusChanged { focusState ->
                     if (!focusState.isFocused) {
                         val newWeight = weightText.toFloatOrNull() ?: 0f
@@ -599,19 +614,41 @@ private fun SetRow(
                             onUpdateSet(workoutSet.copy(weight = newWeight))
                         }
                     }
+                },
+            decorationBox = { innerTextField ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outline,
+                            shape = MaterialTheme.shapes.extraSmall
+                        )
+                        .padding(horizontal = 8.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    if (weightText.isEmpty()) {
+                        Text(
+                            text = "0",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    innerTextField()
                 }
+            }
         )
-        OutlinedTextField(
+        BasicTextField(
             value = repsText,
             onValueChange = { repsText = it },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
-            placeholder = {
-                Text(if (workoutSet.isAmrap) "5+" else "0")
-            },
+            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                color = MaterialTheme.colorScheme.onSurface
+            ),
             modifier = Modifier
                 .weight(1f)
-                .height(56.dp)
+                .height(35.dp)
                 .onFocusChanged { focusState ->
                     if (!focusState.isFocused) {
                         val newReps = repsText.toIntOrNull() ?: 0
@@ -619,7 +656,29 @@ private fun SetRow(
                             onUpdateSet(workoutSet.copy(reps = newReps))
                         }
                     }
+                },
+            decorationBox = { innerTextField ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outline,
+                            shape = MaterialTheme.shapes.extraSmall
+                        )
+                        .padding(horizontal = 8.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    if (repsText.isEmpty()) {
+                        Text(
+                            text = if (workoutSet.isAmrap) "5+" else "0",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    innerTextField()
                 }
+            }
         )
         if (isLogged) {
             Icon(
@@ -1019,8 +1078,7 @@ private fun WorkoutExerciseCardPreview() {
             onAddSet = {},
             onUpdateSet = {},
             onDeleteSet = {},
-            onMoveUp = {},
-            onMoveDown = {}
+            dragHandle = {}
         )
     }
 }
@@ -1049,8 +1107,7 @@ private fun WorkoutExerciseCardEmptyPreview() {
             onAddSet = {},
             onUpdateSet = {},
             onDeleteSet = {},
-            onMoveUp = {},
-            onMoveDown = {}
+            dragHandle = {}
         )
     }
 }

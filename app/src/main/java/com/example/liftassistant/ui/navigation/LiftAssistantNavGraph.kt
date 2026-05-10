@@ -5,6 +5,7 @@ package com.example.liftassistant.ui.navigation
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -318,31 +319,43 @@ private fun LiftAssistantBottomNavBar(
     navController: NavHostController,
     modifier: Modifier = Modifier
 ) {
-    NavigationBar(modifier = modifier) {
-        val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentDestination = navBackStackEntry?.destination
-        bottomNavItems.forEach { item ->
-            NavigationBarItem(
-                icon = {
-                    Icon(
-                        imageVector = item.icon,
-                        contentDescription = stringResource(item.titleRes)
-                    )
-                },
-                label = { Text(stringResource(item.titleRes)) },
-                selected = currentDestination?.hierarchy?.any {
-                    it.route == item.route
-                } == true,
-                onClick = {
-                    navController.navigate(item.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
+    Surface(
+        modifier = modifier,
+        shadowElevation = 0.dp,
+        border = BorderStroke(
+            width = 0.5.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+    ) {
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.surface,
+            modifier = modifier
+        ) {
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentDestination = navBackStackEntry?.destination
+            bottomNavItems.forEach { item ->
+                NavigationBarItem(
+                    icon = {
+                        Icon(
+                            imageVector = item.icon,
+                            contentDescription = stringResource(item.titleRes)
+                        )
+                    },
+                    label = { Text(stringResource(item.titleRes)) },
+                    selected = currentDestination?.hierarchy?.any {
+                        it.route == item.route
+                    } == true,
+                    onClick = {
+                        navController.navigate(item.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
                     }
-                }
-            )
+                )
+            }
         }
     }
 }
