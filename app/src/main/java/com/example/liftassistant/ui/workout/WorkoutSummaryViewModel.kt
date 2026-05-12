@@ -66,9 +66,10 @@ class WorkoutSummaryViewModel(
             .getExercisesForWorkoutStream(workoutId)
             .first()
 
-        val exerciseItems = workoutExercises.map { workoutExercise ->
+        val exerciseItems = workoutExercises.mapNotNull { workoutExercise ->
+            val exerciseId = workoutExercise.exerciseId ?: return@mapNotNull null
             val exercise = exerciseRepository
-                .getExerciseWithCategoriesStream(workoutExercise.exerciseId)
+                .getExerciseWithCategoriesStream(exerciseId)
                 .filterNotNull()
                 .first()
                 .exercise

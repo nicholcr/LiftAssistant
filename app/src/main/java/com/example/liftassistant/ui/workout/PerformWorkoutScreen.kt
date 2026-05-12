@@ -2,6 +2,14 @@
 
 package com.example.liftassistant.ui.workout
 
+import android.Manifest
+import android.content.Context
+import android.media.RingtoneManager
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -71,6 +79,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -756,6 +765,7 @@ private fun RestTimerFab(
     var remainingSeconds by rememberSaveable { mutableStateOf(0) }
     var isRunning by rememberSaveable { mutableStateOf(false) }
     var showDurationPicker by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     LaunchedEffect(isRunning, remainingSeconds) {
         if (isRunning && remainingSeconds > 0) {
@@ -763,6 +773,8 @@ private fun RestTimerFab(
             remainingSeconds--
         } else if (isRunning && remainingSeconds == 0) {
             isRunning = false
+            vibrateDevice(context)
+            playNotificationSound(context)
         }
     }
 
@@ -1068,6 +1080,40 @@ private fun formatElapsedTime(totalSeconds: Int): String {
         "%d:%02d:%02d".format(hours, minutes, seconds)
     } else {
         "%02d:%02d".format(minutes, seconds)
+    }
+}
+
+@RequiresPermission(Manifest.permission.VIBRATE)
+private fun vibrateDevice(context: Context) {
+    val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE)
+                as VibratorManager
+        vibratorManager.defaultVibrator
+    } else {
+        @Suppress("DEPRECATION")
+        context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        vibrator.vibrate(
+            VibrationEffect.createWaveform(
+                longArrayOf(0, 300, 100, 300, 100, 300),
+                -1
+            )
+        )
+    } else {
+        @Suppress("DEPRECATION")
+        vibrator.vibrate(longArrayOf(0, 300, 100, 300, 100, 300), -1)
+    }
+}
+
+private fun playNotificationSound(context: Context) {
+    try {
+        val notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        val ringtone = RingtoneManager.getRingtone(context, notification)
+        ringtone.play()
+    } catch (e: Exception) {
+        // Silently fail if sound cannot be played
     }
 }
 

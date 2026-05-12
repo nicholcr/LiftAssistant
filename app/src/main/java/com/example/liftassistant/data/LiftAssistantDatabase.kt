@@ -5,6 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.liftassistant.data.daos.CategoryDao
 import com.example.liftassistant.data.daos.ExerciseDao
@@ -29,7 +30,7 @@ import kotlinx.coroutines.launch
         WorkoutExercise::class,
         WorkoutSet::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -56,6 +57,33 @@ abstract class LiftAssistantDatabase : RoomDatabase() {
             "Cardio", "Favorites"
         )
 
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+            CREATE TABLE `workout_exercises_new` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `workoutId` INTEGER NOT NULL,
+                `exerciseId` INTEGER,
+                `order` INTEGER NOT NULL,
+                `routineSlotId` INTEGER,
+                FOREIGN KEY(`workoutId`) REFERENCES `workouts`(`id`) ON DELETE CASCADE,
+                FOREIGN KEY(`exerciseId`) REFERENCES `exercises`(`id`) ON DELETE RESTRICT,
+                FOREIGN KEY(`routineSlotId`) REFERENCES `routine_slots`(`id`) ON DELETE SET NULL
+            )
+        """)
+                db.execSQL("""
+            INSERT INTO `workout_exercises_new` 
+            SELECT `id`, `workoutId`, `exerciseId`, `order`, `routineSlotId` 
+            FROM `workout_exercises`
+        """)
+                db.execSQL("DROP TABLE `workout_exercises`")
+                db.execSQL("ALTER TABLE `workout_exercises_new` RENAME TO `workout_exercises`")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_workout_exercises_workoutId` ON `workout_exercises` (`workoutId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_workout_exercises_exerciseId` ON `workout_exercises` (`exerciseId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_workout_exercises_routineSlotId` ON `workout_exercises` (`routineSlotId`)")
+            }
+        }
+
         fun getDatabase(context: Context): LiftAssistantDatabase {
             return Instance ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -64,8 +92,7 @@ abstract class LiftAssistantDatabase : RoomDatabase() {
                     "lift_assistant_database"
                 )
                     .addMigrations(
-                        // Add future migrations here as they are created
-                        // e.g. MIGRATION_1_2, MIGRATION_2_3
+                        MIGRATION_1_2
                     )
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
