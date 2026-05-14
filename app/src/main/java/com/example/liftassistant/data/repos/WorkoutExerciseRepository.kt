@@ -9,5 +9,6 @@ interface WorkoutExerciseRepository {
     fun getWorkoutsForExerciseStream(exerciseId: Int): Flow<List<WorkoutExercise>>
     suspend fun insertWorkoutExercise(workoutExercise: WorkoutExercise): Long
     suspend fun updateWorkoutExercise(workoutExercise: WorkoutExercise)
+    suspend fun updateExerciseId(workoutExerciseId: Int, exerciseId: Int)
     suspend fun deleteWorkoutExercise(workoutExercise: WorkoutExercise)
 }

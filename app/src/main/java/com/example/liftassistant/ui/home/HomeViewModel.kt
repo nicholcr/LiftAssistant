@@ -41,11 +41,9 @@ class HomeViewModel(
         initialValue = HomeUiState()
     )
 
-    fun discardInProgressWorkout() {
-        viewModelScope.launch {
-            homeUiState.value.inProgressWorkout?.let { workout ->
-                workoutRepository.deleteWorkout(workout)
-            }
+    suspend fun discardInProgressWorkout() {
+        homeUiState.value.inProgressWorkout?.let { workout ->
+            workoutRepository.deleteWorkout(workout)
         }
     }
 }

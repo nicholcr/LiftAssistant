@@ -19,6 +19,9 @@ class OfflineWorkoutExerciseRepository(
     override suspend fun insertWorkoutExercise(workoutExercise: WorkoutExercise): Long =
         workoutExerciseDao.insert(workoutExercise)
 
+    override suspend fun updateExerciseId(workoutExerciseId: Int, exerciseId: Int) =
+        workoutExerciseDao.updateExerciseId(workoutExerciseId, exerciseId)
+
     override suspend fun updateWorkoutExercise(workoutExercise: WorkoutExercise) =
         workoutExerciseDao.update(workoutExercise)
 

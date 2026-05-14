@@ -31,6 +31,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,6 +73,8 @@ import com.example.liftassistant.ui.workout_routine.WorkoutRoutineDestination
 import com.example.liftassistant.ui.workout_routine.WorkoutRoutineListDestination
 import com.example.liftassistant.ui.workout_routine.WorkoutRoutineListScreen
 import com.example.liftassistant.ui.workout_routine.WorkoutRoutineScreen
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 @Composable
 fun LiftAssistantNavHost(
@@ -82,6 +85,7 @@ fun LiftAssistantNavHost(
     val homeUiState by homeViewModel.homeUiState.collectAsState()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val coroutineScope = rememberCoroutineScope()
     var showResumeWorkoutDialog by remember { mutableStateOf(false) }
     var hasShownResumeDialog by remember { mutableStateOf(false) }
 
@@ -310,8 +314,10 @@ fun LiftAssistantNavHost(
                     )
                 },
                 onDiscard = {
-                    showResumeWorkoutDialog = false
-                    homeViewModel.discardInProgressWorkout()
+                    coroutineScope.launch {
+                        homeViewModel.discardInProgressWorkout()
+                        showResumeWorkoutDialog = false
+                    }
                 },
                 onDismiss = {
                     showResumeWorkoutDialog = false

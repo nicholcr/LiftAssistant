@@ -58,14 +58,16 @@ class PerformWorkoutViewModel(
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val workoutId: Int? = savedStateHandle[PerformWorkoutDestination.workoutIdArg]
-    private val routineId: Int? = savedStateHandle[PerformWorkoutDestination.routineIdArg]
+    private val workoutId: Int? = savedStateHandle.get<Int>(PerformWorkoutDestination.workoutIdArg)
+    private val routineId: Int? = savedStateHandle.get<Int>(PerformWorkoutDestination.routineIdArg)
+        ?.takeIf { it != -1 }
 
     private val _uiState = MutableStateFlow(PerformWorkoutUiState())
     val uiState: StateFlow<PerformWorkoutUiState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
+            android.util.Log.d("LiftAssistant", "PerformWorkoutViewModel init: workoutId=$workoutId, routineId=$routineId")
             when {
                 workoutId != null -> loadExistingWorkout(workoutId)
                 else -> createNewWorkout(routineId)
@@ -140,6 +142,7 @@ class PerformWorkoutViewModel(
                 .first()
 
             slots.forEachIndexed { index, slot ->
+                android.util.Log.d("LiftAssistant", "Processing slot id=${slot.id}, fixedExerciseId=${slot.fixedExerciseId}, categoryLabel=${slot.categoryLabel}")
                 when {
                     slot.fixedExerciseId != null -> {
                         android.util.Log.d("LiftAssistant", "Slot id=${slot.id}, fixedExerciseId=${slot.fixedExerciseId}, routineId=${slot.routineId}")
@@ -152,7 +155,7 @@ class PerformWorkoutViewModel(
                         android.util.Log.d("LiftAssistant", "Inserting WorkoutExercise: workoutId=${newWorkoutId.toInt()}, exerciseId=${slot.fixedExerciseId}")
                         val weId = workoutExerciseRepository
                             .insertWorkoutExercise(workoutExercise)
-                        android.util.Log.d("LiftAssistant", "WorkoutExercise inserted with id=$weId")
+                        android.util.Log.d("LiftAssistant", "Inserted placeholder WorkoutExercise with id=$weId for slot ${slot.id}")
                         val sets = prePopulateSets(slot, weId.toInt())
                         android.util.Log.d("LiftAssistant", "Sets pre-populated: ${sets.size}")
                         val exerciseWithCategories = exerciseRepository
@@ -170,14 +173,15 @@ class PerformWorkoutViewModel(
                         )
                     }
                     slot.categoryLabel != null -> {
+                        android.util.Log.d("LiftAssistant", "Creating placeholder for flexible slot id=${slot.id}, categoryLabel=${slot.categoryLabel}")
                         val workoutExercise = WorkoutExercise(
                             workoutId = newWorkoutId.toInt(),
                             exerciseId = null,
                             order = index,
                             routineSlotId = slot.id
                         )
-                        val weId = workoutExerciseRepository
-                            .insertWorkoutExercise(workoutExercise)
+                        val weId = workoutExerciseRepository.insertWorkoutExercise(workoutExercise)
+                        android.util.Log.d("LiftAssistant", "Placeholder inserted with id=$weId")
                         val filteredExercises = availableExercises.filter { ewc ->
                             ewc.categories.any { it.name == slot.categoryLabel }
                         }
@@ -188,6 +192,10 @@ class PerformWorkoutViewModel(
                                 workoutExerciseId = weId.toInt()
                             )
                         )
+                        android.util.Log.d("LiftAssistant", "UnresolvedSlotItem added with workoutExerciseId=${weId.toInt()}")
+                    }
+                    else -> {
+                        android.util.Log.d("LiftAssistant", "Slot ${slot.id} has both null - skipping")
                     }
                 }
             }
@@ -237,6 +245,9 @@ class PerformWorkoutViewModel(
         val sets = parseSetScheme(slot.setScheme, workoutExerciseId)
         if (sets.isNotEmpty()) {
             workoutSetRepository.insertAllWorkoutSets(sets)
+            return workoutSetRepository
+                .getSetsForWorkoutExerciseStream(workoutExerciseId)
+                .first()
         }
         return sets
     }
@@ -257,7 +268,7 @@ class PerformWorkoutViewModel(
                         WorkoutSet(
                             workoutExerciseId = workoutExerciseId,
                             order = order++,
-                            reps = reps,
+                            reps = 0,
                             weight = 0f,
                             isAmrap = amrap
                         )
@@ -331,12 +342,13 @@ class PerformWorkoutViewModel(
                 reps = 0,
                 weight = 0f
             )
-            workoutSetRepository.insertWorkoutSet(newSet)
+            val newSetId = workoutSetRepository.insertWorkoutSet(newSet)
+            val insertedSet = newSet.copy(id = newSetId.toInt())
             _uiState.update { state ->
                 state.copy(
                     exerciseItems = state.exerciseItems.map { item ->
                         if (item.workoutExercise.id == workoutExerciseId) {
-                            item.copy(sets = item.sets + newSet)
+                            item.copy(sets = item.sets + insertedSet)
                         } else item
                     }
                 )
@@ -420,19 +432,26 @@ class PerformWorkoutViewModel(
         exerciseWithCategories: ExerciseWithCategories
     ) {
         viewModelScope.launch {
-            val workoutExercise = WorkoutExercise(
-                id = unresolvedSlot.workoutExerciseId,
-                workoutId = _uiState.value.workout?.id ?: return@launch,
-                exerciseId = exerciseWithCategories.exercise.id,
-                order = unresolvedSlot.routineSlot.order,
-                routineSlotId = unresolvedSlot.routineSlot.id
+            val workoutId = _uiState.value.workout?.id ?: return@launch
+
+            // Update just the exerciseId column directly
+            workoutExerciseRepository.updateExerciseId(
+                workoutExerciseId = unresolvedSlot.workoutExerciseId,
+                exerciseId = exerciseWithCategories.exercise.id
             )
-            workoutExerciseRepository.updateWorkoutExercise(workoutExercise)
+
             val sets = prePopulateSets(
                 unresolvedSlot.routineSlot,
-                unresolvedSlot.workoutExerciseId)
+                unresolvedSlot.workoutExerciseId
+            )
             val newItem = WorkoutExerciseItem(
-                workoutExercise = workoutExercise,
+                workoutExercise = WorkoutExercise(
+                    id = unresolvedSlot.workoutExerciseId,
+                    workoutId = workoutId,
+                    exerciseId = exerciseWithCategories.exercise.id,
+                    order = unresolvedSlot.routineSlot.order,
+                    routineSlotId = unresolvedSlot.routineSlot.id
+                ),
                 exercise = exerciseWithCategories.exercise,
                 categories = exerciseWithCategories.categories.map { it.name },
                 sets = sets,

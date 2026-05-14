@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
         WorkoutExercise::class,
         WorkoutSet::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -84,6 +84,14 @@ abstract class LiftAssistantDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_workout_sets_workoutExerciseId` ON `workout_sets` (`workoutExerciseId`)"
+                )
+            }
+        }
+
         fun getDatabase(context: Context): LiftAssistantDatabase {
             return Instance ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -92,7 +100,8 @@ abstract class LiftAssistantDatabase : RoomDatabase() {
                     "lift_assistant_database"
                 )
                     .addMigrations(
-                        MIGRATION_1_2
+                        MIGRATION_1_2,
+                        MIGRATION_2_3
                     )
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {

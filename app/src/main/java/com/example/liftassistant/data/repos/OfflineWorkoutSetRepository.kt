@@ -10,7 +10,7 @@ class OfflineWorkoutSetRepository(
     override fun getSetsForWorkoutExerciseStream(workoutExerciseId: Int): Flow<List<WorkoutSet>> =
         workoutSetDao.getSetsForWorkoutExercise(workoutExerciseId)
 
-    override suspend fun insertWorkoutSet(workoutSet: WorkoutSet) =
+    override suspend fun insertWorkoutSet(workoutSet: WorkoutSet): Long =
         workoutSetDao.insert(workoutSet)
 
     override suspend fun insertAllWorkoutSets(workoutSets: List<WorkoutSet>) =

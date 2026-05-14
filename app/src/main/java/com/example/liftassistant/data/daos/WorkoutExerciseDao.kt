@@ -28,4 +28,7 @@ interface WorkoutExerciseDao {
 
     @Query("SELECT * FROM workout_exercises WHERE exerciseId = :exerciseId ORDER BY workoutId DESC")
     fun getWorkoutsForExercise(exerciseId: Int): Flow<List<WorkoutExercise>>
+
+    @Query("UPDATE workout_exercises SET exerciseId = :exerciseId WHERE id = :workoutExerciseId")
+    suspend fun updateExerciseId(workoutExerciseId: Int, exerciseId: Int)
 }

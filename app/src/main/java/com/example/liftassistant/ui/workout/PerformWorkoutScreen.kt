@@ -661,13 +661,6 @@ private fun SetRow(
                         .padding(horizontal = 8.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    if (weightText.isEmpty()) {
-                        Text(
-                            text = "0",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                     innerTextField()
                 }
             }
@@ -703,13 +696,6 @@ private fun SetRow(
                         .padding(horizontal = 8.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    if (repsText.isEmpty()) {
-                        Text(
-                            text = if (workoutSet.isAmrap) "5+" else "0",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                     innerTextField()
                 }
             }
