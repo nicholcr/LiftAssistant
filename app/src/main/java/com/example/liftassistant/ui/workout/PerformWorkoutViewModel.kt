@@ -14,6 +14,7 @@ import com.example.liftassistant.data.repos.ExerciseRepository
 import com.example.liftassistant.data.repos.RoutineSlotRepository
 import com.example.liftassistant.data.repos.WorkoutExerciseRepository
 import com.example.liftassistant.data.repos.WorkoutRepository
+import com.example.liftassistant.data.repos.WorkoutRoutineRepository
 import com.example.liftassistant.data.repos.WorkoutSetRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -55,6 +56,7 @@ class PerformWorkoutViewModel(
     private val workoutSetRepository: WorkoutSetRepository,
     private val exerciseRepository: ExerciseRepository,
     private val routineSlotRepository: RoutineSlotRepository,
+    private val workoutRoutineRepository: WorkoutRoutineRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -122,11 +124,27 @@ class PerformWorkoutViewModel(
     }
 
     private suspend fun createNewWorkout(routineId: Int? = null) {
+        val existingInProgressWorkout = workoutRepository
+            .getInProgressWorkoutStream()
+            .first()
+
+        if (existingInProgressWorkout != null) {
+            loadExistingWorkout(existingInProgressWorkout.id)
+            return
+        }
+
+        val routineName = routineId?.let { id ->
+            workoutRoutineRepository.getWorkoutRoutineStream(id)
+                .filterNotNull()
+                .first()
+                .name
+        }
+
         val availableExercises = exerciseRepository
             .getAllExercisesWithCategoriesStream()
             .first()
 
-        val workout = Workout(name = generateWorkoutName())
+        val workout = Workout(name = generateWorkoutName(routineName))
         val newWorkoutId = workoutRepository.insertWorkout(workout)
         val newWorkout = workoutRepository
             .getWorkoutStream(newWorkoutId.toInt())
@@ -281,15 +299,12 @@ class PerformWorkoutViewModel(
 
     private fun generateWorkoutName(routineName: String? = null): String {
         val timeOfDay = when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
-            in 5..11 -> "Morning"
-            in 12..16 -> "Afternoon"
-            in 17..20 -> "Evening"
-            else -> "Night"
+            in 5..11 -> "Morning Workout"
+            in 12..16 -> "Afternoon Workout"
+            in 17..20 -> "Evening Workout"
+            else -> "Night Workout"
         }
-        val dateFormatter = SimpleDateFormat("EEE MMM d", Locale.getDefault())
-        val dateString = dateFormatter.format(Date())
-        val prefix = routineName ?: "$timeOfDay Workout"
-        return "$prefix \u2014 $dateString"
+        return routineName ?: timeOfDay
     }
 
     fun addExercise(exerciseWithCategories: ExerciseWithCategories) {

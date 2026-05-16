@@ -40,12 +40,6 @@ class HomeViewModel(
         started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
         initialValue = HomeUiState()
     )
-
-    suspend fun discardInProgressWorkout() {
-        homeUiState.value.inProgressWorkout?.let { workout ->
-            workoutRepository.deleteWorkout(workout)
-        }
-    }
 }
 
 data class HomeUiState(

@@ -90,6 +90,7 @@ object AppViewModelProvider {
                 liftAssistantApplication().container.workoutSetRepository,
                 liftAssistantApplication().container.exerciseRepository,
                 liftAssistantApplication().container.routineSlotRepository,
+                liftAssistantApplication().container.workoutRoutineRepository,
                 this.createSavedStateHandle()
             )
         }

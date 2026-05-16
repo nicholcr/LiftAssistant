@@ -116,7 +116,7 @@ fun PerformWorkoutScreen(
     modifier: Modifier = Modifier,
     viewModel: PerformWorkoutViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val uiState by viewModel.uiState.collectAsState()
     var elapsedSeconds by remember { mutableStateOf(0) }
     var showEndWorkoutDialog by remember { mutableStateOf(false) }

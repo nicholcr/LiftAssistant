@@ -85,21 +85,11 @@ fun LiftAssistantNavHost(
     val homeUiState by homeViewModel.homeUiState.collectAsState()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val coroutineScope = rememberCoroutineScope()
-    var showResumeWorkoutDialog by remember { mutableStateOf(false) }
-    var hasShownResumeDialog by remember { mutableStateOf(false) }
 
     val showBanner = homeUiState.inProgressWorkout != null &&
             currentRoute != PerformWorkoutDestination.route &&
             currentRoute != PerformWorkoutDestination.routeWithArgs &&
             currentRoute != PerformWorkoutDestination.routeWithRoutineArg
-
-    LaunchedEffect(homeUiState.inProgressWorkout) {
-        if (homeUiState.inProgressWorkout != null && !hasShownResumeDialog) {
-            showResumeWorkoutDialog = true
-            hasShownResumeDialog = true
-        }
-    }
 
     Scaffold(
         bottomBar = {
@@ -110,7 +100,10 @@ fun LiftAssistantNavHost(
                         homeUiState.inProgressWorkout?.let { workout ->
                             navController.navigate(
                                 "${PerformWorkoutDestination.route}/${workout.id}"
-                            )
+                            ) {
+                                launchSingleTop = true
+                                restoreState = false
+                            }
                         }
                     }
                 )
@@ -130,9 +123,11 @@ fun LiftAssistantNavHost(
                 composable(route = HomeDestination.route) {
                     HomeScreen(
                         navigateToStartWorkout = {
+                            android.util.Log.d("LiftAssistant", "Navigating to PerformWorkoutScreen freeform")
                             navController.navigate(PerformWorkoutDestination.route)
                         },
                         navigateToStartWorkoutFromRoutine = { routineId ->
+                            android.util.Log.d("LiftAssistant", "Navigating to PerformWorkoutScreen with routineId=$routineId")
                             navController.navigate(
                                 "${PerformWorkoutDestination.route}?routineId=$routineId"
                             )
@@ -302,29 +297,6 @@ fun LiftAssistantNavHost(
             }
         }
     }
-
-    if (showResumeWorkoutDialog) {
-        homeUiState.inProgressWorkout?.let { workout ->
-            ResumeWorkoutDialog(
-                workoutName = workout.name,
-                onResume = {
-                    showResumeWorkoutDialog = false
-                    navController.navigate(
-                        "${PerformWorkoutDestination.route}/${workout.id}"
-                    )
-                },
-                onDiscard = {
-                    coroutineScope.launch {
-                        homeViewModel.discardInProgressWorkout()
-                        showResumeWorkoutDialog = false
-                    }
-                },
-                onDismiss = {
-                    showResumeWorkoutDialog = false
-                }
-            )
-        }
-    }
 }
 
 @Composable
@@ -332,14 +304,7 @@ private fun LiftAssistantBottomNavBar(
     navController: NavHostController,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier,
-        shadowElevation = 0.dp,
-        border = BorderStroke(
-            width = 0.5.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
-        )
-    ) {
+    Surface {
         NavigationBar(
             containerColor = MaterialTheme.colorScheme.surface,
             modifier = modifier
@@ -359,6 +324,12 @@ private fun LiftAssistantBottomNavBar(
                         it.route == item.route
                     } == true,
                     onClick = {
+                        val currentRoute = navController.currentBackStackEntry?.destination?.route
+                        if (currentRoute == PerformWorkoutDestination.routeWithArgs ||
+                            currentRoute == PerformWorkoutDestination.route ||
+                            currentRoute == PerformWorkoutDestination.routeWithRoutineArg) {
+                            navController.popBackStack()
+                        }
                         navController.navigate(item.route) {
                             popUpTo(navController.graph.findStartDestination().id) {
                                 saveState = true
@@ -421,38 +392,4 @@ private fun ActiveWorkoutBanner(
             }
         }
     }
-}
-
-@Composable
-private fun ResumeWorkoutDialog(
-    workoutName: String,
-    onResume: () -> Unit,
-    onDiscard: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.resume_workout_title)) },
-        text = {
-            Text(stringResource(R.string.resume_workout_message, workoutName))
-        },
-        confirmButton = {
-            TextButton(onClick = onResume) {
-                Text(stringResource(R.string.resume))
-            }
-        },
-        dismissButton = {
-            Column {
-                TextButton(onClick = onDiscard) {
-                    Text(
-                        text = stringResource(R.string.discard_workout),
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.dismiss))
-                }
-            }
-        }
-    )
 }
